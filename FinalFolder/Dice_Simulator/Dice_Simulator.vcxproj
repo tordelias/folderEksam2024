@@ -122,6 +122,9 @@
       <AdditionalLibraryDirectories>$(ProjectDir)../Dice_Simulator/Dependency/includes/assimp/lib;$(ProjectDir)../Dice_Simulator/Dependency/libs</AdditionalLibraryDirectories>
       <AdditionalDependencies>opengl32.lib;glfw3.lib;boost_system-vc143-mt-x64-1_86.lib;boost_filesystem-vc143-mt-x64-1_86.lib;boost_chrono-vc143-mt-x64-1_86.lib;boost_container-vc143-mt-x64-1_86.lib;boost_thread-vc143-mt-x64-1_86.lib;gmp.lib;gmpxx.lib;mpfr.lib;lzma.lib;zlib.lib;zstd.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(ProjectDir)Dependency\libs\gmp-10.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -142,6 +145,9 @@
       <AdditionalLibraryDirectories>$(ProjectDir)../Dice_Simulator/Dependency/libs</AdditionalLibraryDirectories>
       <AdditionalDependencies>opengl32.lib;glfw3.lib;boost_system-vc143-mt-x64-1_86.lib;boost_filesystem-vc143-mt-x64-1_86.lib;boost_chrono-vc143-mt-x64-1_86.lib;boost_container-vc143-mt-x64-1_86.lib;boost_thread-vc143-mt-x64-1_86.lib;gmp.lib;gmpxx.lib;mpfr.lib;lzma.lib;zlib.lib;zstd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(ProjectDir)Dependency\libs\gmp-10.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Component\Component.cpp" />
