@@ -26,6 +26,7 @@ _ReSharper*/
 [Rr]eleases/
 x64/
 x86/
+!Dependency/includes/CGAL/include/boost/predef/architecture/x86/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
 bld/
