@@ -8,6 +8,7 @@ struct Vertex
     float r, g, b;       // Color
     float u, v;          // Texture coordinates
     float normalx, normaly, normalz; // Normals
+    unsigned int index;
 };
 
 class Mesh

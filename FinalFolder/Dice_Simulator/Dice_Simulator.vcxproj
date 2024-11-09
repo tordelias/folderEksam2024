@@ -72,6 +72,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(ProjectDir)Dependency/includes/CGAL/include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)Dependency/libs/CGAL/lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(ProjectDir)Dependency/includes/CGAL/include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)Dependency/libs/CGAL/lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -114,7 +120,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)../Dice_Simulator/Dependency/includes/assimp/lib;$(ProjectDir)../Dice_Simulator/Dependency/libs</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;boost_system-vc143-mt-x64-1_86.lib;boost_filesystem-vc143-mt-x64-1_86.lib;boost_chrono-vc143-mt-x64-1_86.lib;boost_container-vc143-mt-x64-1_86.lib;boost_thread-vc143-mt-x64-1_86.lib;gmp.lib;gmpxx.lib;mpfr.lib;lzma.lib;zlib.lib;zstd.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -134,7 +140,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)../Dice_Simulator/Dependency/libs</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;boost_system-vc143-mt-x64-1_86.lib;boost_filesystem-vc143-mt-x64-1_86.lib;boost_chrono-vc143-mt-x64-1_86.lib;boost_container-vc143-mt-x64-1_86.lib;boost_thread-vc143-mt-x64-1_86.lib;gmp.lib;gmpxx.lib;mpfr.lib;lzma.lib;zlib.lib;zstd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

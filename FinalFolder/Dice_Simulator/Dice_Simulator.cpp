@@ -60,6 +60,7 @@ int main()
     double lastTime = glfwGetTime();  // Initialize lastTime to current time
     float deltaTime;
     double currentTime;
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // ---------------------------------------------------------------------------------------------------------------------------
     //                                                        Main Loop

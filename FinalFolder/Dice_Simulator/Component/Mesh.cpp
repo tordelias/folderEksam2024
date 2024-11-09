@@ -13,8 +13,15 @@
 #include <CGAL/Euclidean_distance.h>
 #include <CGAL/IO/Polyhedron_iostream.h>
 
+
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-typedef CGAL::Delaunay_triangulation_2<K> Delaunay;
+typedef CGAL::Triangulation_vertex_base_2<K> BaseVertex;
+typedef CGAL::Triangulation_vertex_base_2<K, CGAL::Triangulation_ds_vertex_base_2<BaseVertex>> VertexBase;
+typedef CGAL::Triangulation_data_structure_2<VertexBase> Tds;
+typedef CGAL::Delaunay_triangulation_2<K, Tds> Delaunay;
+
+// Define a custom vertex with index
+typedef Delaunay::Vertex_handle Vertex_handle_with_index;
 typedef K::Point_2 Point_2;
 
 // Custom hash function for std::pair<float, float>
@@ -88,71 +95,88 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
     return { vertices, indices };
 }
 
-std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::vec3 color)
-{
+std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::vec3 color) {
     std::vector<Vertex> vertices = Readfile("Data/PointCloud.txt", color);
     std::vector<unsigned int> indices;
 
-    int numCols = sqrt(vertices.size());
-    int numRows = sqrt(vertices.size());
+    // Step 1: Convert 3D points to 2D points (using x, z)
+    std::vector<Point_2> points2D;
+    std::unordered_map<Point_2, unsigned int> pointIndexMap;
 
-    // Generate indices for grid pattern (two triangles per quad)
-    for (int y = 0; y < numRows - 1; ++y) {
-        for (int x = 0; x < numCols - 1; ++x) {
-            int topLeft = y * numCols + x;
-            int topRight = topLeft + 1;
-            int bottomLeft = (y + 1) * numCols + x;
-            int bottomRight = bottomLeft + 1;
-
-            // First triangle
-            indices.push_back(topLeft);
-            indices.push_back(bottomLeft);
-            indices.push_back(topRight);
-
-            // Second triangle
-            indices.push_back(topRight);
-            indices.push_back(bottomLeft);
-            indices.push_back(bottomRight);
-        }
+    // Create the 2D points and the index map (mapping from 2D points to 3D indices)
+    for (unsigned int i = 0; i < vertices.size(); ++i) {
+        Point_2 p2d(vertices[i].x, vertices[i].z);
+        points2D.push_back(p2d);
+        pointIndexMap[p2d] = i;  // Store the original index
     }
 
+    // Step 2: Perform Delaunay Triangulation on the 2D points
+    Delaunay dt;
+    dt.insert(points2D.begin(), points2D.end());
+
+    // Step 3: Generate indices based on the triangulation
+    for (auto f = dt.finite_faces_begin(); f != dt.finite_faces_end(); ++f) {
+        // Get the three vertices of the triangle in the 2D plane
+        Point_2 p0 = f->vertex(0)->point();
+        Point_2 p1 = f->vertex(1)->point();
+        Point_2 p2 = f->vertex(2)->point();
+
+        // Look up the indices of the original vertices in the pointIndexMap
+        unsigned int idx0 = pointIndexMap[p0];
+        unsigned int idx1 = pointIndexMap[p1];
+        unsigned int idx2 = pointIndexMap[p2];
+
+        // Add indices to the list (three vertices per face)
+        indices.push_back(idx0);
+        indices.push_back(idx1);
+        indices.push_back(idx2);
+    }
+
+    // Debug print the generated indices
+    //std::cout << "Generated " << indices.size() / 3 << " triangles:" << std::endl;
+    //for (size_t i = 0; i < indices.size(); i += 3) {
+    //    std::cout << "Triangle: (" << indices[i] << ", " << indices[i + 1] << ", " << indices[i + 2] << ")" << std::endl;
+    //}
 
     return { vertices, indices };
 }
 
-// Readfile function
+
+// Updated Readfile function with CGAL vertex indices
 std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
     std::ifstream inputFile(fileName);
     std::vector<Vertex> pointCloud;
-    std::unordered_map<std::pair<float, float>, float, PairHash> heightMap;
 
     if (inputFile.is_open()) {
         std::string line;
         std::getline(inputFile, line);  // Skip header line if there is one
         Vertex point;
         char comma;
+        int skip = 0;
         float prevY = 0;
-		int skip = 0;
 
         while (inputFile >> point.x >> comma >> point.z >> comma >> point.y) {
-            if (skip == 10) {
+            if (skip == 1) {
                 point.x -= 608016.02;
                 point.y -= 336.8007;
                 point.z -= 6750620.771;
 
-                // Set color based on height comparison
                 if (point.y > prevY) {
                     point.r = 0.0f;
                     point.g = 1.0f;
                     point.b = 0.0f;
                 }
-                else {
-                    point.r = 1.0f;
-                    point.g = 0.0f;
-                    point.b = 0.0f;
-                }
 
-                prevY = point.y;
+            else 
+                {
+                point.r = 1.0f;
+                point.g = 0.0f;
+                point.b = 0.0f;
+                 }
+
+
+                // Add the point to the pointCloud
+				prevY = point.y;
                 pointCloud.push_back(point);
                 skip = 1;
             }
@@ -166,41 +190,5 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
         std::cerr << "Unable to open the input file for reading." << std::endl;
     }
 
-    // Perform Delaunay Triangulation to filter points based on (x, z)
-    std::vector<Vertex> filteredPoints;
-    std::vector<Point_2> cgalPoints;
-
-    // Convert pointCloud to CGAL 2D points for triangulation
-    for (const Vertex& v : pointCloud) {
-        cgalPoints.push_back(Point_2(v.x, v.z));
-    }
-
-    Delaunay dt;
-    dt.insert(cgalPoints.begin(), cgalPoints.end());
-
-    // Iterate over triangulation vertices and add boundary points to filteredPoints
-    for (auto v = dt.finite_vertices_begin(); v != dt.finite_vertices_end(); ++v) {
-        Vertex filteredVertex;
-        filteredVertex.x = v->point().x();
-        filteredVertex.z = v->point().y();
-
-        // Look up the original y (height) value from the heightMap
-        auto it = heightMap.find({ filteredVertex.x, filteredVertex.z });
-        if (it != heightMap.end()) {
-            filteredVertex.y = it->second;
-        }
-        else {
-            filteredVertex.y = 0.0f;  // Fallback if y not found
-        }
-
-        // Set color for filtered points if desired
-        filteredVertex.r = 1.0f;
-        filteredVertex.g = 1.0f;
-        filteredVertex.b = 1.0f;
-
-        filteredPoints.push_back(filteredVertex);
-    }
-
-    std::cout << "Filtered Point Cloud Size: " << filteredPoints.size() << std::endl;
-    return filteredPoints;
+    return pointCloud;
 }
