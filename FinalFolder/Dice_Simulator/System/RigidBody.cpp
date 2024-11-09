@@ -75,6 +75,8 @@ void RigidBody::applyRandomForce(std::vector<std::shared_ptr<Entity>> entities)
 void RigidBody::Update(std::vector<std::shared_ptr<Entity>> entities, float deltaTime)
 {
     for (auto& entity : entities) {
+		if (entity->GetEntityID() == 0)
+			continue;
         applyGravity(entity, deltaTime);
         normalForceGround(entity, deltaTime);
 

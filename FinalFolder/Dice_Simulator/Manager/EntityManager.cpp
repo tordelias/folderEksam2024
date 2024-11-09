@@ -67,17 +67,31 @@ void EntityManager::Render(glm::mat4 viewproj, float dt)
             glBindTexture(GL_TEXTURE_2D, 0);
         }
 
-        // Bind VAO, VBO, and EBO for drawing
-        entity->vao->Bind();
-        entity->vbo->Bind();
-        entity->ebo->Bind();
+        //if (entity->GetEntityID() == 0)
+        //{
+        //    entity->vao->Bind();
+        //    entity->vbo->Bind();
 
-        glDrawElements(GL_TRIANGLES, meshComponent->indices.size(), GL_UNSIGNED_INT, 0);
+        //    glDrawArrays(GL_POINTS, 0, meshComponent->vertices.size());
 
-        // Unbind VAO, VBO, and EBO after drawing
-        entity->vao->Unbind();
-        entity->vbo->Unbind();
-        entity->ebo->Unbind();
+        //    // Unbind VAO, VBO, and EBO after drawing
+        //    entity->vao->Unbind();
+        //    entity->vbo->Unbind();
+        //}
+        //else
+        //{
+            // Bind VAO, VBO, and EBO for drawing
+            entity->vao->Bind();
+            entity->vbo->Bind();
+            entity->ebo->Bind();
+
+            glDrawElements(GL_TRIANGLES, meshComponent->indices.size(), GL_UNSIGNED_INT, 0);
+
+            // Unbind VAO, VBO, and EBO after drawing
+            entity->vao->Unbind();
+            entity->vbo->Unbind();
+            entity->ebo->Unbind();
+        //}
     }
 }
 

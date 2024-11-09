@@ -33,7 +33,13 @@ MeshComponent::MeshComponent(const char* figure, const glm::vec3& color, const c
         auto [torusVertices, torusIndices] = mesh->TorusMesh(color);
         vertices = torusVertices;
         indices = torusIndices;
-    }
+	}
+	else if (figure == "PointCloud") 
+    {
+		auto [pointCloudVertices, pointCloudIndices] = mesh->PointCloud(color);
+		vertices = pointCloudVertices;
+		indices = pointCloudIndices;
+	}
     else {
         std::cerr << "Invalid figure name" << std::endl;
     }

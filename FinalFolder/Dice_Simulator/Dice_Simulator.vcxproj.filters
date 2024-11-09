@@ -115,4 +115,7 @@
     <None Include="Resources\Shaders\default.frag" />
     <None Include="Resources\Shaders\default.vert" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="Data\PointCloud.txt" />
+  </ItemGroup>
 </Project>

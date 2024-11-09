@@ -18,4 +18,7 @@ public:
     std::pair<std::vector<Vertex>, std::vector<unsigned int>> CylinderMesh(glm::vec3 color);
     std::pair<std::vector<Vertex>, std::vector<unsigned int>> ConeMesh(glm::vec3 color);
     std::pair<std::vector<Vertex>, std::vector<unsigned int>> TorusMesh(glm::vec3 color);
+	std::pair<std::vector<Vertex>, std::vector<unsigned int>> PointCloud(glm::vec3 color);
+private:
+    std::vector<Vertex> Readfile(const char* fileName, glm::vec3 color);
 };
