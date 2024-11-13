@@ -3,43 +3,46 @@
 #include <memory>
 #include <iostream>
 #include <vector>
+#include <string>
 
 MeshComponent::MeshComponent(const char* figure, const glm::vec3& color, const char* texture)
     : TexturePath(texture)
 {
     std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
 
-    if (figure == "Cube") {
+    // Convert figure to std::string for reliable comparison
+    std::string figureStr(figure);
+
+    if (figureStr == "Cube") {
         auto [cubeVertices, cubeIndices] = mesh->CubeMesh(color);
         vertices = cubeVertices;
         indices = cubeIndices;
     }
-    else if (figure == "Sphere") {
+    else if (figureStr == "Sphere") {
         auto [sphereVertices, sphereIndices] = mesh->SphereMesh(color);
         vertices = sphereVertices;
         indices = sphereIndices;
     }
-    else if (figure == "Cylinder") {
+    else if (figureStr == "Cylinder") {
         auto [cylinderVertices, cylinderIndices] = mesh->CylinderMesh(color);
         vertices = cylinderVertices;
         indices = cylinderIndices;
     }
-    else if (figure == "Cone") {
+    else if (figureStr == "Cone") {
         auto [coneVertices, coneIndices] = mesh->ConeMesh(color);
         vertices = coneVertices;
         indices = coneIndices;
     }
-    else if (figure == "Torus") {
+    else if (figureStr == "Torus") {
         auto [torusVertices, torusIndices] = mesh->TorusMesh(color);
         vertices = torusVertices;
         indices = torusIndices;
-	}
-	else if (figure == "PointCloud") 
-    {
-		auto [pointCloudVertices, pointCloudIndices] = mesh->PointCloud(color);
-		vertices = pointCloudVertices;
-		indices = pointCloudIndices;
-	}
+    }
+    else if (figureStr == "PointCloud") {
+        auto [pointCloudVertices, pointCloudIndices] = mesh->PointCloud(color);
+        vertices = pointCloudVertices;
+        indices = pointCloudIndices;
+    }
     else {
         std::cerr << "Invalid figure name" << std::endl;
     }

@@ -17,10 +17,12 @@ Entity::Entity() : vao(std::make_shared<VAO>()), vbo(std::make_shared<VBO>()), e
 
 Entity::~Entity()
 {
+	std::cout << "Entity destroyed" << std::endl;
 }
 
 void Entity::Destroy()
 {
+	components.clear();
 }
 
 bool Entity::IsActive() const

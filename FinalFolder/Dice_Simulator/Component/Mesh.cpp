@@ -24,13 +24,6 @@ typedef CGAL::Delaunay_triangulation_2<K, Tds> Delaunay;
 typedef Delaunay::Vertex_handle Vertex_handle_with_index;
 typedef K::Point_2 Point_2;
 
-// Custom hash function for std::pair<float, float>
-struct PairHash {
-    template <class T1, class T2>
-    std::size_t operator()(const std::pair<T1, T2>& p) const {
-        return std::hash<T1>()(p.first) ^ (std::hash<T2>()(p.second) << 1);
-    }
-};
 
 // Cube mesh generation
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::CubeMesh(glm::vec3 color) {
@@ -96,7 +89,7 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
 }
 
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::vec3 color) {
-    std::vector<Vertex> vertices = Readfile("Data/PointCloud.txt", color);
+    std::vector<Vertex> vertices = Readfile("Data/32-2-516-156-31.txt", color);
     std::vector<unsigned int> indices;
 
     // Step 1: Convert 3D points to 2D points (using x, z)
@@ -132,57 +125,38 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
         indices.push_back(idx2);
     }
 
-    // Debug print the generated indices
-    //std::cout << "Generated " << indices.size() / 3 << " triangles:" << std::endl;
-    //for (size_t i = 0; i < indices.size(); i += 3) {
-    //    std::cout << "Triangle: (" << indices[i] << ", " << indices[i + 1] << ", " << indices[i + 2] << ")" << std::endl;
-    //}
-
     return { vertices, indices };
 }
 
 
-// Updated Readfile function with CGAL vertex indices
 std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
     std::ifstream inputFile(fileName);
     std::vector<Vertex> pointCloud;
+	float min_x = -816.02, max_x = 783.98;
+    float min_z = -620.771, max_z = 579.229;
 
     if (inputFile.is_open()) {
         std::string line;
         std::getline(inputFile, line);  // Skip header line if there is one
         Vertex point;
-        char comma;
-        int skip = 0;
-        float prevY = 0;
 
-        while (inputFile >> point.x >> comma >> point.z >> comma >> point.y) {
-            if (skip == 1) {
+        point.r = color.x;
+        point.g = color.y;
+        point.b = color.z;
+
+        while (std::getline(inputFile, line)) 
+        {
+			if (sscanf_s(line.c_str(), "%f %f %f", &point.x, &point.z, &point.y) == 3)
+			{
                 point.x -= 608016.02;
                 point.y -= 336.8007;
                 point.z -= 6750620.771;
 
-                if (point.y > prevY) {
-                    point.r = 0.0f;
-                    point.g = 1.0f;
-                    point.b = 0.0f;
-                }
+                point.u = (point.x - min_x) / (max_x - min_x);  // Normalize x coordinate
+                point.v = (point.z - min_z) / (max_z - min_z);  // Normalize z coordinate
 
-            else 
-                {
-                point.r = 1.0f;
-                point.g = 0.0f;
-                point.b = 0.0f;
-                 }
-
-
-                // Add the point to the pointCloud
-				prevY = point.y;
                 pointCloud.push_back(point);
-                skip = 1;
-            }
-            else {
-                ++skip;
-            }
+			}
         }
         inputFile.close();
     }
@@ -192,3 +166,4 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
 
     return pointCloud;
 }
+

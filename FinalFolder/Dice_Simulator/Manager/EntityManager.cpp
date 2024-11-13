@@ -56,7 +56,7 @@ void EntityManager::Render(glm::mat4 viewproj, float dt)
 
         glUniformMatrix4fv(glGetUniformLocation(shader->ID, "camMatrix"), 1, GL_FALSE, glm::value_ptr(viewproj * model));
 
-        bool hasTexture = meshComponent->TexturePath != "";
+        bool hasTexture = std::string(meshComponent->TexturePath) != "";
 		glUniform1i(glGetUniformLocation(shader->ID, "useTexture"), hasTexture); // Set useTexture to true if the entity has a texture
 
         if (hasTexture) {
@@ -131,7 +131,9 @@ void EntityManager::RemoveLastEntity()
 		{
             textures.pop_back();
 		}
+		auto entity = entities.back();
         entities.pop_back();
+		entity->Destroy();
         --EntityCount;
 	}
 	else
