@@ -23,7 +23,8 @@ public:
 private:
     float gravity = 9.81f;
     float mass = 1.0f;
-    const float bounceThreshold = 0.5f;       // Minimum velocity to trigger bounce
-    const float stopBounceThreshold = 0.3f;   // Threshold below which we stop bouncing
-    const float dampingFactor = 0.5f;
+    const float bounceThreshold = 2.f;       // Minimum velocity to trigger bounce
+    const float stopBounceThreshold = 0.1f;   // Threshold below which we stop bouncing
+	const float dampingFactor = 0.6f;		// Damping factor for bounce
+	const float angularDampingFactor = 0.7f; // Damping factor for angular velocity
 };

@@ -43,6 +43,24 @@ void SpawnSystem::input(GLFWwindow* window)
 	{
 		blaunchDiece = false;
 	}
+	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && !bPPressed)
+	{
+		if (bFillTriangles)
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			bFillTriangles = false;
+		}
+		else
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			bFillTriangles = true;
+		}
+		bPPressed = true;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE)
+	{
+		bPPressed = false;
+	}
 }
 
 void SpawnSystem::SpawnEntity()

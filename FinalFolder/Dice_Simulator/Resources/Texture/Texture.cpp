@@ -38,7 +38,6 @@ Texture::Texture(const char* texture1, const std::shared_ptr<Shader>& shaderProg
     stbi_image_free(data);
 
     shaderProgram->Activate();
-    // shaderProgram.setInt("tex0", num);
 }
 
 

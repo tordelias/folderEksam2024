@@ -14,7 +14,7 @@
 #include "Component/Component.h"
 #include "System/SpawnSystem.h"
 
-void processInput(Window window, std::shared_ptr<Camera> camera);
+void processInput(Window window);
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 800;
@@ -31,7 +31,15 @@ int main()
 	window.CreateWindow(SCR_WIDTH, SCR_HEIGHT, "Dice Simulator", camera);
 
     std::shared_ptr<Shader> shaderProgram = std::make_shared<Shader>("Resources/Shaders/default.vert", "Resources/Shaders/default.frag");
+	glm::vec3 lightPos(0,0,0);
+	glm::mat4 lightModel = glm::mat4(1.0f);
+	lightModel = glm::translate(lightModel, lightPos);
+
     shaderProgram->Activate();
+
+	glUniformMatrix4fv(glGetUniformLocation(shaderProgram->ID, "model"), 1, GL_FALSE, glm::value_ptr(lightModel));
+	glUniform3fv(glGetUniformLocation(shaderProgram->ID, "lightColor"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+	glUniform3fv(glGetUniformLocation(shaderProgram->ID, "lightPos"), 1, glm::value_ptr(lightPos));
 
     // ---------------------------------------------------------------------------------------------------------------------------
 	//                                                        Initialize bellow
@@ -39,13 +47,13 @@ int main()
 	std::shared_ptr<EntityManager> manager = std::make_shared<EntityManager>(shaderProgram);
 	std::shared_ptr<SpawnSystem> spawnSystem = std::make_shared<SpawnSystem>(manager);
 
-  //  spawnSystem->SpawnEntity(0, 0, 0, "Resources/Texture/Textures/skybox.jpg", "Cube", 1000.0f);
+    spawnSystem->SpawnEntity(0, 0, 0, "Resources/Texture/Textures/grass.png", "Cube", 3000.0f);
 
-	std::shared_ptr<Entity> entity = std::make_shared<Entity>();
-	entity->AddComponent<TransformComponent>(glm::vec3(0,0,0), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.f));
-	entity->AddComponent<MeshComponent>("PointCloud", glm::vec3(1.0f, 1.0f, 1.0f), "Resources/Texture/Textures/beako.png");
-	manager->AddEntity(entity);
-	glPointSize(1.0f);
+	//std::shared_ptr<Entity> entity = std::make_shared<Entity>();
+	//entity->AddComponent<TransformComponent>(glm::vec3(0,0,0), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.f));
+	//entity->AddComponent<MeshComponent>("PointCloud", glm::vec3(1.0f, 1.0f, 1.0f), "Resources/Texture/Textures/wood.png");
+	//manager->AddEntity(entity);
+	//glPointSize(1.0f);
 
     spawnSystem->SpawnEntity(2, 0, -10, "Resources/Texture/Textures/beako.png");
     spawnSystem->SpawnEntity(0, 0, -10, "Resources/Texture/Textures/beako.png");
@@ -60,7 +68,6 @@ int main()
     double lastTime = glfwGetTime();  // Initialize lastTime to current time
     float deltaTime;
     double currentTime;
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // ---------------------------------------------------------------------------------------------------------------------------
     //                                                        Main Loop
@@ -74,7 +81,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-        processInput(window, camera);
+        processInput(window);
         camera->Inputs(window.GetWindow());
         glm::mat4 viewproj = camera->Matrix(45.0f, 0.1f, 3000.0f, *shaderProgram, "camMatrix");        //Set render distance and FOV
     // ---------------------------------------------------------------------------------------------------------------------------
@@ -94,17 +101,8 @@ int main()
     return 0;
 }
 
-void processInput(Window window, std::shared_ptr<Camera> camera)
+void processInput(Window window)
 {
     if (glfwGetKey(window.GetWindow(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window.GetWindow(), true);
-	if (glfwGetKey(window.GetWindow(), GLFW_KEY_P) == GLFW_PRESS && !bPPressed)
-	{
-		bPPressed = true;
-		window.ResizeWindow(400, 800);
-	} 
-    else if (glfwGetKey(window.GetWindow(), GLFW_KEY_P) == GLFW_RELEASE)
-	{
-		bPPressed = false;
-    }
 }

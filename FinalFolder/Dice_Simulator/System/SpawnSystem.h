@@ -27,6 +27,8 @@ private:
 	bool spacePressedLastFrame = false;
 	bool FPressedLastFrame = false;
 	bool blaunchDiece = false;
+	bool bPPressed = false;
+	bool bFillTriangles = true;
 };
 
 

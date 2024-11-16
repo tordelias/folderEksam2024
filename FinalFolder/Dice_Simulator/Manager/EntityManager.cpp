@@ -165,6 +165,7 @@ void EntityManager::initalizeMesh(std::shared_ptr<Entity>& entity)
     entity->vao->LinkAttrib(*entity->vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, x)); // Position
     entity->vao->LinkAttrib(*entity->vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, r)); // Color
     entity->vao->LinkAttrib(*entity->vbo, 2, 2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, u)); // TexCoords
+    entity->vao->LinkAttrib(*entity->vbo, 3, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, normalx)); // TexCoords
 
     entity->ebo->Bind();
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, meshComponent->indices.size() * sizeof(unsigned int), meshComponent->indices.data(), GL_STATIC_DRAW);

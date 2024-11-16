@@ -28,27 +28,55 @@ typedef K::Point_2 Point_2;
 // Cube mesh generation
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::CubeMesh(glm::vec3 color) {
     std::vector<Vertex> vertices = {
-        { -0.5f, -0.5f, -0.5f, color.r, color.g, color.b, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f }, // Vertex 0 (Front face)
-        {  0.5f, -0.5f, -0.5f, color.r, color.g, color.b, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f }, // Vertex 1
-        {  0.5f,  0.5f, -0.5f, color.r, color.g, color.b, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f }, // Vertex 2
-        { -0.5f,  0.5f, -0.5f, color.r, color.g, color.b, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f }, // Vertex 3
-        { -0.5f, -0.5f,  0.5f, color.r, color.g, color.b, 0.0f, 0.0f, 0.0f, 0.0f,  1.0f }, // Vertex 4 (Back face)
-        {  0.5f, -0.5f,  0.5f, color.r, color.g, color.b, 1.0f, 0.0f, 0.0f, 0.0f,  1.0f }, // Vertex 5
-        {  0.5f,  0.5f,  0.5f, color.r, color.g, color.b, 1.0f, 1.0f, 0.0f, 0.0f,  1.0f }, // Vertex 6
-        { -0.5f,  0.5f,  0.5f, color.r, color.g, color.b, 0.0f, 1.0f, 0.0f, 0.0f,  1.0f }  // Vertex 7
+        // Front face (z = -0.5f)
+        { -0.5f, -0.5f, -0.5f, color.r, color.g, color.b, 0.0f, 0.0f,  0.0f,  0.0f, -1.0f, 0 }, // Bottom-left
+        {  0.5f, -0.5f, -0.5f, color.r, color.g, color.b, 1.0f, 0.0f,  0.0f,  0.0f, -1.0f, 1 }, // Bottom-right
+        {  0.5f,  0.5f, -0.5f, color.r, color.g, color.b, 1.0f, 1.0f,  0.0f,  0.0f, -1.0f, 2 }, // Top-right
+        { -0.5f,  0.5f, -0.5f, color.r, color.g, color.b, 0.0f, 1.0f,  0.0f,  0.0f, -1.0f, 3 }, // Top-left
+
+        // Back face (z = 0.5f)
+        { -0.5f, -0.5f,  0.5f, color.r, color.g, color.b, 1.0f, 0.0f,  0.0f,  0.0f,  1.0f, 4 }, // Bottom-right
+        {  0.5f, -0.5f,  0.5f, color.r, color.g, color.b, 0.0f, 0.0f,  0.0f,  0.0f,  1.0f, 5 }, // Bottom-left
+        {  0.5f,  0.5f,  0.5f, color.r, color.g, color.b, 0.0f, 1.0f,  0.0f,  0.0f,  1.0f, 6 }, // Top-left
+        { -0.5f,  0.5f,  0.5f, color.r, color.g, color.b, 1.0f, 1.0f,  0.0f,  0.0f,  1.0f, 7 }, // Top-right
+
+        // Left face (x = -0.5f)
+        { -0.5f, -0.5f, -0.5f, color.r, color.g, color.b, 1.0f, 0.0f, -1.0f,  0.0f,  0.0f, 8 }, // Bottom-right
+        { -0.5f,  0.5f, -0.5f, color.r, color.g, color.b, 1.0f, 1.0f, -1.0f,  0.0f,  0.0f, 9 }, // Top-right
+        { -0.5f,  0.5f,  0.5f, color.r, color.g, color.b, 0.0f, 1.0f, -1.0f,  0.0f,  0.0f, 10 }, // Top-left
+        { -0.5f, -0.5f,  0.5f, color.r, color.g, color.b, 0.0f, 0.0f, -1.0f,  0.0f,  0.0f, 11 }, // Bottom-left
+
+        // Right face (x = 0.5f)
+        {  0.5f, -0.5f, -0.5f, color.r, color.g, color.b, 0.0f, 0.0f,  1.0f,  0.0f,  0.0f, 12 }, // Bottom-left
+        {  0.5f,  0.5f, -0.5f, color.r, color.g, color.b, 0.0f, 1.0f,  1.0f,  0.0f,  0.0f, 13 }, // Top-left
+        {  0.5f,  0.5f,  0.5f, color.r, color.g, color.b, 1.0f, 1.0f,  1.0f,  0.0f,  0.0f, 14 }, // Top-right
+        {  0.5f, -0.5f,  0.5f, color.r, color.g, color.b, 1.0f, 0.0f,  1.0f,  0.0f,  0.0f, 15 }, // Bottom-right
+
+        // Top face (y = 0.5f)
+        { -0.5f,  0.5f, -0.5f, color.r, color.g, color.b, 0.0f, 1.0f,  0.0f,  1.0f,  0.0f, 16 }, // Top-left
+        {  0.5f,  0.5f, -0.5f, color.r, color.g, color.b, 1.0f, 1.0f,  0.0f,  1.0f,  0.0f, 17 }, // Top-right
+        {  0.5f,  0.5f,  0.5f, color.r, color.g, color.b, 1.0f, 0.0f,  0.0f,  1.0f,  0.0f, 18 }, // Bottom-right
+        { -0.5f,  0.5f,  0.5f, color.r, color.g, color.b, 0.0f, 0.0f,  0.0f,  1.0f,  0.0f, 19 }, // Bottom-left
+
+        // Bottom face (y = -0.5f)
+        { -0.5f, -0.5f, -0.5f, color.r, color.g, color.b, 0.0f, 0.0f,  0.0f, -1.0f,  0.0f, 20 }, // Bottom-left
+        {  0.5f, -0.5f, -0.5f, color.r, color.g, color.b, 1.0f, 0.0f,  0.0f, -1.0f,  0.0f, 21 }, // Bottom-right
+        {  0.5f, -0.5f,  0.5f, color.r, color.g, color.b, 1.0f, 1.0f,  0.0f, -1.0f,  0.0f, 22 }, // Top-right
+        { -0.5f, -0.5f,  0.5f, color.r, color.g, color.b, 0.0f, 1.0f,  0.0f, -1.0f,  0.0f, 23 }  // Top-left
     };
 
     std::vector<unsigned int> indices = {
-        0, 1, 2, 2, 3, 0,   // Front face
-        4, 5, 6, 6, 7, 4,   // Back face
-        0, 1, 5, 5, 4, 0,   // Bottom face
-        2, 3, 7, 7, 6, 2,   // Top face
-        1, 2, 6, 6, 5, 1,   // Right face
-        3, 0, 4, 4, 7, 3    // Left face
+        0, 1, 2, 2, 3, 0,   // Front
+        4, 5, 6, 6, 7, 4,   // Back
+        8, 9, 10, 10, 11, 8, // Left
+        12, 13, 14, 14, 15, 12, // Right
+        16, 17, 18, 18, 19, 16, // Top
+        20, 21, 22, 22, 23, 20  // Bottom
     };
 
     return { vertices, indices };
 }
+
 
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::SphereMesh(glm::vec3 color)
 {
@@ -97,7 +125,6 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
     std::vector<Point_2> points2D;
     std::unordered_map<Point_2, unsigned int> pointIndexMap;
 
-    // Create the 2D points and the index map (mapping from 2D points to 3D indices)
     size_t totalVertices = vertices.size();
     size_t processedVertices = 0;
 
@@ -115,7 +142,7 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
         if (processedVertices % 10000 == 0 || processedVertices == totalVertices) {
             float progress = static_cast<float>(processedVertices) / totalVertices;
             int pos = barWidth * progress;
-            std::cout << "\r[";  // Start overwriting the same line
+            std::cout << "\r[";
             for (int j = 0; j < barWidth; ++j) {
                 if (j < pos) std::cout << "=";
                 else if (j == pos) std::cout << ">";
@@ -126,7 +153,6 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
         }
     }
 
-    // After the first progress bar is complete, print a newline to clear the line
     std::cout << std::endl;
 
     // Step 2: Perform Delaunay Triangulation on the 2D points
@@ -163,7 +189,7 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
         if (processedFaces % 10000 == 0 || processedFaces == totalFaces) {
             float progress = static_cast<float>(processedFaces) / totalFaces;
             int pos = barWidth * progress;
-            std::cout << "\r[";  // Overwrite the same line for progress bar
+            std::cout << "\r[";
             for (int j = 0; j < barWidth; ++j) {
                 if (j < pos) std::cout << "=";
                 else if (j == pos) std::cout << ">";
@@ -174,8 +200,53 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
         }
     }
 
-    // After the second progress bar is complete, print a newline to finish
     std::cout << std::endl;
+
+    // Step 4: Compute normals for each vertex
+    for (auto& vertex : vertices) {
+        vertex.normalx = 0;
+        vertex.normaly = 0;
+        vertex.normalz = 0;
+    }
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        unsigned int idx0 = indices[i];
+        unsigned int idx1 = indices[i + 1];
+        unsigned int idx2 = indices[i + 2];
+
+        Vertex& v0 = vertices[idx0];
+        Vertex& v1 = vertices[idx1];
+        Vertex& v2 = vertices[idx2];
+
+        glm::vec3 p0(v0.x, v0.y, v0.z);
+        glm::vec3 p1(v1.x, v1.y, v1.z);
+        glm::vec3 p2(v2.x, v2.y, v2.z);
+
+        glm::vec3 edge1 = p1 - p0;
+        glm::vec3 edge2 = p2 - p0;
+
+        glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+
+        v0.normalx += faceNormal.x;
+        v0.normaly += faceNormal.y;
+        v0.normalz += faceNormal.z;
+
+        v1.normalx += faceNormal.x;
+        v1.normaly += faceNormal.y;
+        v1.normalz += faceNormal.z;
+
+        v2.normalx += faceNormal.x;
+        v2.normaly += faceNormal.y;
+        v2.normalz += faceNormal.z;
+    }
+
+    for (auto& vertex : vertices) {
+        glm::vec3 normal(vertex.normalx, vertex.normaly, vertex.normalz);
+        normal = glm::normalize(normal);
+        vertex.normalx = normal.x;
+        vertex.normaly = normal.y;
+        vertex.normalz = normal.z;
+    }
 
     return { vertices, indices };
 }

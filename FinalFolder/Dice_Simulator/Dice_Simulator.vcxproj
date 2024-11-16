@@ -203,6 +203,8 @@ copy "$(ProjectDir)Dependency\includes\assimp\lib\assimp-vc143-mt.dll" "$(OutDir
     <ClInclude Include="System\SpawnSystem.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\Shaders\Light.vert" />
+    <None Include="Resources\Shaders\Light.frag" />
     <None Include="Resources\Shaders\default.frag" />
     <None Include="Resources\Shaders\default.vert" />
   </ItemGroup>

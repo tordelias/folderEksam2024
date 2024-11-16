@@ -102,11 +102,6 @@ glm::vec3 RigidBody::CalculateNormalForce(std::shared_ptr<Entity> entity) {
     glm::vec3 normalForce = glm::vec3(0, 0, 0);
     float gravitationalForce = mass * gravity;
 
-    // Define the bounce parameters
-    const float bounceThreshold = 0.5f;  // Minimum velocity to trigger bounce
-    const float stopBounceThreshold = 0.1f; // Threshold below which we stop bouncing
-    const float dampingFactor = 0.8f;  // Exponential decay factor for each bounce (0 < damping < 1)
-
     if (auto transform = entity->GetComponent<TransformComponent>()) {
         // Check if the object is at or below ground level (y <= 0)
         if (transform->position.y <= 0) {
@@ -138,7 +133,6 @@ glm::vec3 RigidBody::CalculateNormalForce(std::shared_ptr<Entity> entity) {
             }
 
             // Apply angular damping to reduce rotation gradually
-            float angularDampingFactor = 0.95f;
             transform->angularVelocity *= angularDampingFactor;
 
             // Check if angular velocity is effectively zero
