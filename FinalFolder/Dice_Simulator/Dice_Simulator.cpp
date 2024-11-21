@@ -47,13 +47,13 @@ int main()
 	std::shared_ptr<EntityManager> manager = std::make_shared<EntityManager>(shaderProgram);
 	std::shared_ptr<SpawnSystem> spawnSystem = std::make_shared<SpawnSystem>(manager);
 
-    spawnSystem->SpawnEntity(0, 0, 0, "Resources/Texture/Textures/grass.png", "Cube", 3000.0f);
+    spawnSystem->SpawnEntity(0, 0, 0, "Resources/Texture/Textures/sky.jpg", "Cube", 3000.0f);
 
-	//std::shared_ptr<Entity> entity = std::make_shared<Entity>();
-	//entity->AddComponent<TransformComponent>(glm::vec3(0,0,0), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.f));
-	//entity->AddComponent<MeshComponent>("PointCloud", glm::vec3(1.0f, 1.0f, 1.0f), "Resources/Texture/Textures/wood.png");
-	//manager->AddEntity(entity);
-	//glPointSize(1.0f);
+	std::shared_ptr<Entity> entity = std::make_shared<Entity>();
+	entity->AddComponent<TransformComponent>(glm::vec3(0,0,0), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.f));
+	entity->AddComponent<MeshComponent>("PointCloud", glm::vec3(1.f, 1.f, 1.f), "");
+	manager->AddEntity(entity);
+	glPointSize(1.0f);
 
     spawnSystem->SpawnEntity(2, 0, -10, "Resources/Texture/Textures/beako.png");
     spawnSystem->SpawnEntity(0, 0, -10, "Resources/Texture/Textures/beako.png");
@@ -88,7 +88,6 @@ int main()
        
 		spawnSystem->input(window.GetWindow());
 		manager->Render(viewproj, deltaTime);
-
 
 
 

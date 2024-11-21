@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <cmath>
+#include <omp.h>
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/convex_hull_2.h>
@@ -202,7 +203,7 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
 
     std::cout << std::endl;
 
-    // Step 4: Compute normals for each vertex
+  //Compute normals for each vertex
     for (auto& vertex : vertices) {
         vertex.normalx = 0;
         vertex.normaly = 0;
@@ -250,6 +251,148 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
 
     return { vertices, indices };
 }
+
+std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::BSplineSurface(glm::vec3 color) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+
+    // Control points for the surface (example control grid)
+    std::vector<Vertex> controlPoints = Readfile("Data/32-2-516-156-31.txt", color);
+
+    int numU = 1600;
+    int numV = 1200;
+    int degree = 2;
+
+    // Check if there are enough control points for the grid
+    if (controlPoints.size() < (numU + 1) * (numV + 1)) {
+        std::cerr << "Error: Not enough control points!" << std::endl;
+        return { vertices, indices }; // Return empty result
+    }
+
+    // Corrected knot vectors
+    std::vector<float> uKnots;
+    std::vector<float> vKnots;
+
+    // U Knot Vector
+    for (int i = 0; i < (numU + degree + 1); i++) {
+        if (i <= degree) {
+            uKnots.push_back(0.0f);
+        }
+        else if (i >= numU) {
+            uKnots.push_back(1.0f);  // Normalize the end knot to 1
+        }
+        else {
+            uKnots.push_back((float)(i - degree) / (float)(numU - degree));  // Interior knots
+        }
+    }
+
+    // V Knot Vector
+    for (int i = 0; i < (numV + degree + 1); i++) {
+        if (i <= degree) {
+            vKnots.push_back(0.0f);
+        }
+        else if (i >= numV) {
+            vKnots.push_back(1.0f);  // Normalize the end knot to 1
+        }
+        else {
+            vKnots.push_back((float)(i - degree) / (float)(numV - degree));  // Interior knots
+        }
+    }
+
+    // Resample control points into a grid-like structure
+    std::vector<Vertex> gridControlPoints((numU + 1) * (numV + 1));
+    int idx = 0;
+
+    // Resample or bin the control points into the grid
+    for (int i = 0; i <= numU; ++i) {
+        for (int j = 0; j <= numV; ++j) {
+            // Find a representative control point from the point cloud for each grid cell
+            // Example method: pick the closest point to the grid position
+            glm::vec3 gridPos(i / float(numU), j / float(numV), 0.0f);  // For simplicity, treat this as a 2D grid
+
+            float minDist = std::numeric_limits<float>::max();
+            int closestPointIdx = -1;
+
+            // Loop over all points in the point cloud to find the closest one
+            for (int k = 0; k < controlPoints.size(); ++k) {
+                glm::vec3 controlPos(controlPoints[k].x, controlPoints[k].y, controlPoints[k].z);
+                float dist = glm::distance(controlPos, gridPos);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestPointIdx = k;
+                }
+            }
+
+            // Assign the closest point to the grid control point
+            gridControlPoints[idx++] = controlPoints[closestPointIdx];
+        }
+    }
+
+    // Generate surface vertices using resampled control points
+    for (int i = 0; i <= numU; ++i) {
+        for (int j = 0; j <= numV; ++j) {
+            float u = (float)i / numU;
+            float v = (float)j / numV;
+
+            glm::vec3 point(0.0f);
+
+            // Use the resampled gridControlPoints to compute the B-spline surface
+            for (int m = 0; m <= numU; ++m) {
+                for (int n = 0; n <= numV; ++n) {
+                    float basisU = BSplineBasis(m, degree, u, uKnots);
+                    float basisV = BSplineBasis(n, degree, v, vKnots);
+
+                    // Access the resampled control point grid
+                    point += glm::vec3(gridControlPoints[m * (numV + 1) + n].x,
+                        gridControlPoints[m * (numV + 1) + n].y,
+                        gridControlPoints[m * (numV + 1) + n].z) * basisU * basisV;
+                }
+            }
+
+            Vertex vertex;
+            vertex.x = point.x;
+            vertex.y = point.y;
+            vertex.z = point.z;
+            vertex.r = color.r;
+            vertex.g = color.g;
+            vertex.b = color.b;
+            vertex.u = u;
+            vertex.v = v;
+            vertex.normalx = 0.0f;
+            vertex.normaly = 0.0f;
+            vertex.normalz = 1.0f;
+            vertex.index = vertices.size();
+
+            vertices.push_back(vertex);
+
+            // Create indices for triangles
+            if (i < numU && j < numV) {
+                unsigned int idx1 = i * (numV + 1) + j;
+                unsigned int idx2 = idx1 + 1;
+                unsigned int idx3 = (i + 1) * (numV + 1) + j + 1;
+                unsigned int idx4 = (i + 1) * (numV + 1) + j;
+
+                indices.push_back(idx1);
+                indices.push_back(idx2);
+                indices.push_back(idx3); // Triangle 1
+
+                indices.push_back(idx1);
+                indices.push_back(idx3);
+                indices.push_back(idx4); // Triangle 2
+            }
+        }
+    }
+
+    return { vertices, indices };
+}
+
+
+
+
+
+
+
+
 
 
 std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
@@ -324,6 +467,85 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
 
     return pointCloud;
 }
+
+float Mesh::BSplineBasis(int i, int p, float t, const std::vector<float>& knots) {
+    // Out-of-range check
+    if (i < 0 || i >= knots.size() - 1)
+    {
+		std::cerr << "Index out of range!" << std::endl;
+        return 0.0f;
+    }
+
+    // Base case: zero-degree basis function
+    if (p == 0) {
+        // Handle special case for the last knot span
+        if (i == knots.size() - 2) {
+            return (t >= knots[i] && t <= knots[i + 1]) ? 1.0f : 0.0f;
+        }
+        return (t >= knots[i] && t < knots[i + 1]) ? 1.0f : 0.0f;
+    }
+
+    // Recursive case: compute alpha and beta
+    float alpha = 0.0f;
+    if (knots[i + p] != knots[i]) {
+        alpha = (t - knots[i]) / (knots[i + p] - knots[i]) * BSplineBasis(i, p - 1, t, knots);
+    }
+
+    float beta = 0.0f;
+    if (knots[i + p + 1] != knots[i + 1]) {
+        beta = (knots[i + p + 1] - t) / (knots[i + p + 1] - knots[i + 1]) * BSplineBasis(i + 1, p - 1, t, knots);
+    }
+
+    return alpha + beta;
+}
+
+
+
+
+
+std::vector<glm::vec3> Mesh::BarycentricCoordinates(std::vector<unsigned int> indices, std::vector<Vertex> vertices)
+{
+    std::vector<glm::vec3> result;
+	float u, v, w;
+    if (vertices.empty()) {
+		std::cerr << "Vertices list is empty!" << std::endl;
+		return std::vector<glm::vec3>();
+    }
+    for (int i = 0; i < indices.size(); i += 3) 
+    {
+        int index0 = indices[i];
+        int index1 = indices[i + 1];
+        int index2 = indices[i + 2];
+		glm::vec3 v0(vertices[index0].x, vertices[index0].y, vertices[index0].z);
+		glm::vec3 v1(vertices[index1].x, vertices[index1].y, vertices[index1].z);
+		glm::vec3 v2(vertices[index2].x, vertices[index2].y, vertices[index2].z);
+
+        glm::vec3 cpoint = (v0 + v1 + v2) / 3.0f; // get center of triangle 
+
+        glm::vec3 v0v1 = v1 - v0;
+        glm::vec3 v0v2 = v2 - v0;
+        glm::vec3 v0p = cpoint - v0;
+
+        // Computing dot products
+        double dot00 = glm::dot(v0v1, v0v1);
+        double dot01 = glm::dot(v0v1, v0v2);
+        double dot02 = glm::dot(v0v1, v0p);
+        double dot11 = glm::dot(v0v2, v0v2);
+        double dot12 = glm::dot(v0v2, v0p);
+
+        // Computing barycentric coordinates
+        double invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
+        double v = (dot11 * dot02 - dot01 * dot12) * invDenom;
+        double w = (dot00 * dot12 - dot01 * dot02) * invDenom;
+        double u = 1 - v - w;
+		result.push_back(glm::vec3(u, v, w));
+    }
+
+
+
+    return result;
+}
+
 
 
 

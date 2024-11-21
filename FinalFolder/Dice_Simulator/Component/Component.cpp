@@ -43,6 +43,11 @@ MeshComponent::MeshComponent(const char* figure, const glm::vec3& color, const c
         vertices = pointCloudVertices;
         indices = pointCloudIndices;
     }
+	else if (figureStr == "BSplineSurface") {
+		auto [bsplineVertices, bsplineIndices] = mesh->BSplineSurface(color);
+		vertices = bsplineVertices;
+		indices = bsplineIndices;
+	}
     else {
         std::cerr << "Invalid figure name" << std::endl;
     }

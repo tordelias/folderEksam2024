@@ -17,8 +17,8 @@ uniform vec3 lightColor;  // Light color
 uniform vec3 viewPos;     // Camera position
 
 void main() {
-    // Ambient light
-    vec3 ambient = 0.9 * lightColor;
+    // Ambient light (increase a bit to brighten the scene)
+    vec3 ambient = 0.8 * lightColor; // Raised ambient intensity to 0.5
 
     // Diffuse light
     vec3 norm = normalize(Normal);
@@ -26,18 +26,24 @@ void main() {
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor;
 
-    // Specular light
+    // Blinn-Phong specular light (softened specular)
     vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
-    vec3 specular = spec * lightColor;
+    vec3 halfDir = normalize(viewDir + lightDir); // Halfway vector for Blinn-Phong
+    float spec = pow(max(dot(norm, halfDir), 0.0), 16.0); // Reduced shininess exponent
+    vec3 specular = 0.2 * spec * lightColor; // Lower specular intensity
 
-    // Combine lighting effects
+    // Combine lighting effects (more ambient to brighten the world)
     vec3 lighting = ambient + diffuse + specular;
+
+    // Clamp the lighting values to avoid over-bright spots
+    lighting = clamp(lighting, 0.0, 1.0);
 
     // Apply texture or vertex color
     vec3 baseColor = useTexture ? texture(ourTexture, TexCoords).rgb : color;
+
+    // Final color (apply lighting and base color)
     vec3 finalColor = lighting * baseColor;
 
+    // Output the final color without gamma correction
     FragColor = vec4(finalColor, 1.0);
 }
