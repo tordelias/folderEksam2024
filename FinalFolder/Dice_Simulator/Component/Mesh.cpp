@@ -84,6 +84,57 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::SphereMesh(glm::
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
 
+    int radius = 1.0f;
+    int circumferenceTile = 18;
+    int layerTile = 18;
+    int slices = (int)(circumferenceTile + 0.5f);
+    if (slices < 4) {
+        slices = 4;
+    }
+
+    int half_slices = slices / 2;
+    int layerCount = (int)(layerTile + 0.5f);
+    if (layerCount < 2)
+    {
+        layerCount = 2;
+    }
+    float pi = 3.1415f;
+    for (int layerIndex = 0; layerIndex <= layerCount; layerIndex++)
+    {
+        float v = (1.0 - (float)layerIndex / layerCount);
+        float heightOffset = std::sin((1.0 - 2.0 * layerIndex / layerCount) * pi / 2.0);
+        float cosUp = sqrt(1.0 - heightOffset * heightOffset);
+        float z = heightOffset;
+        for (int i = 0; i <= half_slices; i++)
+        {
+            float u = (float)i / (float)half_slices;
+            float angle = 2 * pi * u; // pi * 2 to get full sphere
+            float x = std::cos(angle) * cosUp;
+            float y = std::sin(angle) * cosUp;
+            Vertex V1 = Vertex{ x * radius, y * radius, z * radius, x, y, z, u, v };
+            vertices.push_back(V1);
+        }
+
+    }
+    for (int layer = 0; layer < layerCount; layer++)
+    {
+        for (int i = 0; i < half_slices; i++)
+        {
+            // Index for the current layer and the next layer
+            int currentRow = layer * (half_slices + 1) * 2;
+            int nextRow = (layer + 1) * (half_slices + 1) * 2;
+
+            // Creating two triangles (quad) between each pair of vertices in adjacent layers
+            indices.push_back(currentRow + i);        // 1st triangle: curRow, nextRow, nextRow+1
+            indices.push_back(nextRow + i);
+            indices.push_back(nextRow + i + 1);
+
+            indices.push_back(currentRow + i);        // 2nd triangle: curRow, nextRow+1, curRow+1
+            indices.push_back(nextRow + i + 1);
+            indices.push_back(currentRow + i + 1);
+        }
+    }
+
 
     return { vertices, indices };
 }
@@ -112,8 +163,81 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
 
+    // Define the size of the terrain grid
+    int width = 10;   // Number of vertices along the X axis
+    int depth = 10;   // Number of vertices along the Z axis
+    float spacing = 1.0f;  // Space between vertices
 
+    // Center the grid around (0, 0, 0)
+    float halfWidth = width / 2.0f;
+    float halfDepth = depth / 2.0f;
+	int count = 0;
 
+    // Generate vertices with height variation along the Y axis
+    for (int z = 0; z < depth; ++z) {
+        for (int x = 0; x < width; ++x) {
+            Vertex vertex;
+
+            // Position (X and Z are used for the grid, Y is the height)
+            vertex.x = (x - halfWidth) * spacing;  // Shift the x position to center
+            vertex.z = (z - halfDepth) * spacing;  // Shift the z position to center
+            vertex.y = std::sin(x * 0.5f) * std::cos(z * 0.5f) * 2.0f;  // Height variation using sine and cosine
+
+            // Color
+            vertex.r = color.r;
+            vertex.g = color.g;
+            vertex.b = color.b;
+
+            // Texture coordinates (simple mapping)
+            vertex.u = (float)x / (width - 1);
+            vertex.v = (float)z / (depth - 1);
+
+            // Normals (simplified, pointing upwards)
+            vertex.normalx = 0.0f;
+            vertex.normaly = 1.0f;
+            vertex.normalz = 0.0f;
+
+            // Index (for use in rendering)
+            vertex.index = vertices.size();
+
+            // Friction (random value, for example)
+			if (count % 6 == 0)
+            {
+                vertex.friction = 0.9f;
+                vertex.r = 1.f;
+				vertex.g = 0.f;
+				vertex.b = 0.f;
+            }
+			else
+                vertex.friction = 0.2f;
+			count++;
+            // Add vertex to the list
+            vertices.push_back(vertex);
+        }
+    }
+
+    // Generate indices for a grid of triangles
+    for (int z = 0; z < depth - 1; ++z) {
+        for (int x = 0; x < width - 1; ++x) {
+            // Create two triangles for each grid square
+            unsigned int topLeft = z * width + x;
+            unsigned int topRight = z * width + (x + 1);
+            unsigned int bottomLeft = (z + 1) * width + x;
+            unsigned int bottomRight = (z + 1) * width + (x + 1);
+
+            // First triangle (top-left, top-right, bottom-left)
+            indices.push_back(topLeft);
+            indices.push_back(bottomLeft);
+            indices.push_back(topRight);
+
+            // Second triangle (top-right, bottom-left, bottom-right)
+            indices.push_back(topRight);
+            indices.push_back(bottomLeft);
+            indices.push_back(bottomRight);
+        }
+    }
+
+    // Return the vertices and indices as a pair
     return { vertices, indices };
 }
 
@@ -252,22 +376,28 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
     return { vertices, indices };
 }
 
+
+
+
+
+
+
+
+
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::BSplineSurface(glm::vec3 color) {
-    std::vector<Vertex> vertices;
+    std::vector<Vertex> vertices = Readfile("Data/32-2-516-156-31.txt", color);
     std::vector<unsigned int> indices;
 
     // Control points for the surface (example control grid)
-    std::vector<Vertex> controlPoints = Readfile("Data/32-2-516-156-31.txt", color);
+    std::vector<glm::vec3> mc; // = Readfile("Data/32-2-516-156-31.txt", color);
 
-    int numU = 1600;
-    int numV = 1200;
-    int degree = 2;
+    int pointcloudSize = 2531030; 
+    pointcloudSize /= 1000; 
 
-    // Check if there are enough control points for the grid
-    if (controlPoints.size() < (numU + 1) * (numV + 1)) {
-        std::cerr << "Error: Not enough control points!" << std::endl;
-        return { vertices, indices }; // Return empty result
-    }
+   const int numU =sqrt(pointcloudSize);
+   const int numV = sqrt(pointcloudSize);
+   const int degree = 2;
+
 
     // Corrected knot vectors
     std::vector<float> uKnots;
@@ -279,10 +409,10 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::BSplineSurface(g
             uKnots.push_back(0.0f);
         }
         else if (i >= numU) {
-            uKnots.push_back(1.0f);  // Normalize the end knot to 1
+            uKnots.push_back(numU - degree);  // Normalize the end knot to 1
         }
         else {
-            uKnots.push_back((float)(i - degree) / (float)(numU - degree));  // Interior knots
+            uKnots.push_back((float)(i - degree));  // Interior knots
         }
     }
 
@@ -292,108 +422,194 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::BSplineSurface(g
             vKnots.push_back(0.0f);
         }
         else if (i >= numV) {
-            vKnots.push_back(1.0f);  // Normalize the end knot to 1
+            vKnots.push_back(numV - degree);  // Normalize the end knot to 1
         }
         else {
-            vKnots.push_back((float)(i - degree) / (float)(numV - degree));  // Interior knots
+            vKnots.push_back(i-degree);  // Interior knots
         }
     }
 
-    // Resample control points into a grid-like structure
-    std::vector<Vertex> gridControlPoints((numU + 1) * (numV + 1));
-    int idx = 0;
+	for (auto v : vertices)
+	{
+		mc.push_back(glm::vec3(v.x, v.y, v.z));
+	}
 
-    // Resample or bin the control points into the grid
-    for (int i = 0; i <= numU; ++i) {
-        for (int j = 0; j <= numV; ++j) {
-            // Find a representative control point from the point cloud for each grid cell
-            // Example method: pick the closest point to the grid position
-            glm::vec3 gridPos(i / float(numU), j / float(numV), 0.0f);  // For simplicity, treat this as a 2D grid
+	std::cout << "uKnots: ";
+	for (auto u : uKnots)
+	{
+		std::cout << u << " ";
+	}
+	std::cout << std::endl;
+	std::cout << "vKnots: ";
+	for (auto v : vKnots)
+	{
+		std::cout << v << " ";
+	}
+	std::cout << std::endl;
 
-            float minDist = std::numeric_limits<float>::max();
-            int closestPointIdx = -1;
 
-            // Loop over all points in the point cloud to find the closest one
-            for (int k = 0; k < controlPoints.size(); ++k) {
-                glm::vec3 controlPos(controlPoints[k].x, controlPoints[k].y, controlPoints[k].z);
-                float dist = glm::distance(controlPos, gridPos);
-                if (dist < minDist) {
-                    minDist = dist;
-                    closestPointIdx = k;
-                }
-            }
+    std::vector<std::vector<glm::vec3>> c(numU, std::vector<glm::vec3>(numV));
+	for (int i = 0; i < numU; i++)
+	{
+		for (int j = 0; j < numV; j++)
+		{
+			c[i][j] = mc[j * numU + i];
+		}
+	}
 
-            // Assign the closest point to the grid control point
-            gridControlPoints[idx++] = controlPoints[closestPointIdx];
-        }
-    }
+	MakeBiquadraticSurface(numU, numV, degree, degree, uKnots, vKnots, mc);
 
-    // Generate surface vertices using resampled control points
-    for (int i = 0; i <= numU; ++i) {
-        for (int j = 0; j <= numV; ++j) {
-            float u = (float)i / numU;
-            float v = (float)j / numV;
 
-            glm::vec3 point(0.0f);
+    return { m_vertices, m_indices };
+}
 
-            // Use the resampled gridControlPoints to compute the B-spline surface
-            for (int m = 0; m <= numU; ++m) {
-                for (int n = 0; n <= numV; ++n) {
-                    float basisU = BSplineBasis(m, degree, u, uKnots);
-                    float basisV = BSplineBasis(n, degree, v, vKnots);
+void Mesh::MakeBiquadraticSurface(const int n_u, const int n_v, int d_u, int d_v, std::vector<float> mu, std::vector<float> mv, std::vector<glm::vec3> mc)
+{
+    float h = 0.1f; // Spacing
+    int nu = static_cast<int>((mu[n_u] - mu[d_u]) / h);  // Calculate the number of steps in u
+    int nv = static_cast<int>((mv[n_v] - mv[d_v]) / h);  // Calculate the number of steps in v
 
-                    // Access the resampled control point grid
-                    point += glm::vec3(gridControlPoints[m * (numV + 1) + n].x,
-                        gridControlPoints[m * (numV + 1) + n].y,
-                        gridControlPoints[m * (numV + 1) + n].z) * basisU * basisV;
-                }
-            }
+    // Iterate through v and u to generate surface points
+    for (int i = 0; i < nv; ++i)
+    {
+        for (int j = 0; j < nu; ++j)
+        {
+            float u = j * h;
+            float v = i * h;
+
+            // Find the corresponding knot intervals for u and v
+            //int my_u = FindKnotInterval(mu, d_u, n_u, u);
+            //int my_v = FindKnotInterval(mv, d_v, n_v, v);
+
+            // Calculate the basis function coefficients for the current u and v
+            //auto koeff_par = B2(u, v, my_u, my_v);
+
+            // Evaluate the biquadratic surface at the current u and v
+            glm::vec3 surfacePoint = deBoorSurface(d_u, d_v, mu, mv, mc, u, v, n_u, n_v);
 
             Vertex vertex;
-            vertex.x = point.x;
-            vertex.y = point.y;
-            vertex.z = point.z;
-            vertex.r = color.r;
-            vertex.g = color.g;
-            vertex.b = color.b;
-            vertex.u = u;
-            vertex.v = v;
+
+            // Assign the position values from the evaluated surface point
+            vertex.x = surfacePoint.x;
+            vertex.y = surfacePoint.y;
+            vertex.z = surfacePoint.z;
+
+            // Assign color and texture coordinates
+            vertex.r = 1.0f;
+            vertex.g = 1.0f;
+            vertex.b = 1.0f;
+
+            vertex.u = static_cast<float>(j) / (nu - 1); // Column index normalized
+            vertex.v = static_cast<float>(i) / (nv - 1); // Row index normalized
+
             vertex.normalx = 0.0f;
-            vertex.normaly = 0.0f;
-            vertex.normalz = 1.0f;
-            vertex.index = vertices.size();
+            vertex.normaly = 1.0f;
+            vertex.normalz = 0.0f;
 
-            vertices.push_back(vertex);
-
-            // Create indices for triangles
-            if (i < numU && j < numV) {
-                unsigned int idx1 = i * (numV + 1) + j;
-                unsigned int idx2 = idx1 + 1;
-                unsigned int idx3 = (i + 1) * (numV + 1) + j + 1;
-                unsigned int idx4 = (i + 1) * (numV + 1) + j;
-
-                indices.push_back(idx1);
-                indices.push_back(idx2);
-                indices.push_back(idx3); // Triangle 1
-
-                indices.push_back(idx1);
-                indices.push_back(idx3);
-                indices.push_back(idx4); // Triangle 2
-            }
+            // Push the computed surface point into the vertices array
+            m_vertices.push_back(vertex);
         }
     }
 
-    return { vertices, indices };
+    // Generate indices for the triangle mesh
+    for (int i = 0; i < nv - 1; ++i) {
+        for (int j = 0; j < nu - 1; ++j) {
+            int idx1 = i * nu + j;
+            int idx2 = idx1 + 1;
+            int idx3 = idx1 + nu;
+            int idx4 = idx3 + 1;
+
+            // First triangle (idx1, idx2, idx3)
+            m_indices.push_back(idx1);
+            m_indices.push_back(idx2);
+            m_indices.push_back(idx3);
+
+            // Second triangle (idx2, idx4, idx3)
+            m_indices.push_back(idx2);
+            m_indices.push_back(idx4);
+            m_indices.push_back(idx3);
+        }
+    }
+
+
+    // Generate indices for the triangle mesh
+    for (int i = 0; i < nv - 1; ++i) {
+        for (int j = 0; j < nu - 1; ++j) {
+            int idx1 = i * nu + j;
+            int idx2 = idx1 + 1;
+            int idx3 = idx1 + nu;
+            int idx4 = idx3 + 1;
+
+            // First triangle (idx1, idx2, idx3)
+            m_indices.push_back(idx1);
+            m_indices.push_back(idx2);
+            m_indices.push_back(idx3);
+
+            // Second triangle (idx2, idx4, idx3)
+            m_indices.push_back(idx2);
+            m_indices.push_back(idx4);
+            m_indices.push_back(idx3);
+        }
+    }
 }
 
 
 
+glm::vec3 Mesh::deBoorSurface(int d_u, int d_v, std::vector<float> mu, std::vector<float> mv, std::vector<glm::vec3> ControlsPoints, float u, float v, const int KnotsUsize, const int KnotsVsize)
+{
+    // Step 1: Apply de Boor along the u-direction
+    std::vector<glm::vec3> tempPoints;
+    for (int i = 0; i < KnotsVsize; ++i) {
+        // Extract the i-th row of control points (nu points per row)
+        std::vector<glm::vec3> row;
+        for (int j = 0; j < KnotsUsize; ++j) {
+            row.push_back(ControlsPoints[i * KnotsUsize + j]);
+        }
+
+        // Apply de Boor along the u-direction for this row
+        glm::vec3 t = deBoor(d_u, d_u, mu, row, u);
+        tempPoints.push_back(t); // Store the result for v-direction interpolation
+    }
+
+    // Now apply de Boor along the v-direction on the result from the u-direction
+    glm::vec3 f = deBoor(d_v, d_v, mv, tempPoints, v);
+    return f; // Interpolate along v with the new points
+}
 
 
+glm::vec3 Mesh::deBoor(int k, int degree, const std::vector<float>& knots, std::vector<glm::vec3> controlPoints, float t)
+{
+    // Find the knot span index
+    int span = -1;
+    for (int i = degree; i < knots.size() - 1; ++i) {
+        if (t >= knots[i] && t < knots[i + 1]) {
+            span = i;
+            break;
+        }
+    }
 
+    if (span == -1) {
+        std::cout << "Could not find knot span" << std::endl;
+        return glm::vec3(0.0f); // Return a default value if not found
+    }
 
+    // Initialize d as a copy of control points for the relevant knot span
+    std::vector<glm::vec3> d(degree + 1);
+    for (int i = 0; i <= degree; ++i) {
+        d[i] = controlPoints[span - degree + i];
+    }
 
+    // Perform de Boor recursion
+    for (int r = 1; r <= degree; ++r) {
+        for (int j = degree; j >= r; --j) {
+            float alpha = (t - knots[span - degree + j]) / (knots[span + 1 + j - r] - knots[span - degree + j]);
+            d[j] = (1.0f - alpha) * d[j - 1] + alpha * d[j];
+        }
+    }
 
+    // The evaluated point is now stored in d[degree]
+    return d[degree];
+}
 
 std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
     std::ifstream inputFile(fileName);
@@ -402,15 +618,13 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
     float min_z = -620.771, max_z = 579.229;
     int processedLines = 0;
     int totalLines = 2531030;  // Total number of lines in the file
+	int numPointsIncreacedFriction = 0;
 
     if (inputFile.is_open()) {
         std::string line;
         std::getline(inputFile, line);  // Skip header line if there is one
         Vertex point;
 
-        point.r = color.x;
-        point.g = color.y;
-        point.b = color.z;
 
         // Progress bar setup
         int barWidth = 50;
@@ -418,7 +632,7 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
 
         while (std::getline(inputFile, line))
         {
-            if (sscanf_s(line.c_str(), "%f %f %f", &point.x, &point.z, &point.y) == 3)
+            if (sscanf_s(line.c_str(), "%f %f %f", &point.x, &point.z, &point.y) == 3 && processedLines % 200 == 1)
             {
                 point.x -= 608016.02;
                 point.y -= 336.8007;
@@ -426,6 +640,27 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
 
                 point.u = (point.x - min_x) / (max_x - min_x);  // Normalize x coordinate
                 point.v = (point.z - min_z) / (max_z - min_z);  // Normalize z coordinate
+
+				if (numPointsIncreacedFriction < 50)
+				{
+					point.friction = 0.9f;
+					point.r = 1.0f;
+					point.g = 0.0f;
+					point.b = 0.0f;
+					numPointsIncreacedFriction++;
+				}
+				else
+				{
+                    point.r = color.x;
+                    point.g = color.y;
+                    point.b = color.z;
+					point.friction = 0.1f;
+					numPointsIncreacedFriction++;
+				}
+				if (numPointsIncreacedFriction == 300)
+				{
+					numPointsIncreacedFriction = 0;
+				}
 
                 pointCloud.push_back(point);
             }

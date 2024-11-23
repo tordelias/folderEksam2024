@@ -1,13 +1,10 @@
+#include <glad/glad.h> // Glad first
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 #include "SpawnSystem.h"
 #include <iostream>
-#include <string>
 #include "../Entity.h"
 #include "../Component/Component.h"
-#include <glm/glm.hpp>
-#include <GLFW/glfw3.h>
-#include <memory>
-#include <random>
-
 
 SpawnSystem::SpawnSystem(std::shared_ptr<EntityManager> entityManager) : manager(entityManager)
 {
@@ -17,7 +14,7 @@ SpawnSystem::~SpawnSystem()
 {
 }
 
-void SpawnSystem::input(GLFWwindow* window)
+void SpawnSystem::input(GLFWwindow* window, std::shared_ptr<Camera> camera)
 {
 	bool isQPressed = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
 	if (isQPressed && !spacePressedLastFrame)
@@ -32,7 +29,6 @@ void SpawnSystem::input(GLFWwindow* window)
 		deletelastEntity();
 
 	}
-	FPressedLastFrame = isFPressed;
 
 	if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS && !blaunchDiece)
 	{
@@ -61,6 +57,14 @@ void SpawnSystem::input(GLFWwindow* window)
 	{
 		bPPressed = false;
 	}
+	bool isM1Pressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+
+	if (isM1Pressed && !m1PressedLastFrame)
+	{
+		glm::vec3 position = camera->Position + ((float)10 * camera->Orientation);
+		SpawnEntity(position.x, position.y, position.z);
+	}
+	m1PressedLastFrame = isM1Pressed;
 }
 
 void SpawnSystem::SpawnEntity()
@@ -92,7 +96,7 @@ void SpawnSystem::SpawnEntity(int x, int y, int z)
 	cube->AddComponent<TransformComponent>(glm::vec3(x, y, z), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f));
 
 	// Set random color for the MeshComponent
-	cube->AddComponent<MeshComponent>("Cube", glm::vec3(r, g, b), "");
+	cube->AddComponent<MeshComponent>("Sphere", glm::vec3(r, g, b), "");
 
 	// Add entity to the manager
 	manager->AddEntity(cube);
@@ -103,8 +107,8 @@ void SpawnSystem::SpawnEntity(int x, int y, int z)
 void SpawnSystem::SpawnEntity(int x, int y, int z, const char* texturePath)
 {
 	std::shared_ptr<Entity> cube = std::make_shared<Entity>();
-	cube->AddComponent<TransformComponent>(glm::vec3(x, y, z), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f));
-	cube->AddComponent<MeshComponent>("Cube", glm::vec3(1.0f, 1.0f, 1.0f), texturePath);
+	cube->AddComponent<TransformComponent>(glm::vec3(x, y, z), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.f));
+	cube->AddComponent<MeshComponent>("Sphere", glm::vec3(1.0f, 0.5f, 1.0f), texturePath);
 	manager->AddEntity(cube);
 	offset += offsetAmount;
 }

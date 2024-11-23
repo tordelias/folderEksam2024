@@ -80,3 +80,41 @@ void Window::framebuffer_size_callback(GLFWwindow* window, int width, int height
         windowInstance->camera->UpdateWindow(width, height);
     }
 }
+
+double Window::GetMouseXPos()
+{
+    if (window)
+    {
+        double xpos, ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
+        return xpos;
+    }
+    std::cerr << "Window not created" << std::endl;
+    return 0.0;
+}
+
+// Get the mouse Y position
+double Window::GetMouseYPos()
+{
+    if (window)
+    {
+        double xpos, ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
+        return ypos;
+    }
+    std::cerr << "Window not created" << std::endl;
+    return 0.0;
+}
+
+// Get the combined mouse position as glm::vec2
+glm::vec2 Window::GetMousePos()
+{
+    if (window)
+    {
+        double xpos, ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
+        return glm::vec2(xpos, ypos);
+    }
+    std::cerr << "Window not created" << std::endl;
+    return glm::vec2(0.0, 0.0);
+}
