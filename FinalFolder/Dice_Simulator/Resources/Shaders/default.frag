@@ -17,8 +17,12 @@ uniform vec3 lightColor;  // Light color
 uniform vec3 viewPos;     // Camera position
 
 void main() {
+    // Debugging normals by outputting them directly
+    // Uncomment the next line to visualize normals as RGB colors:
+    // FragColor = vec4(normalize(Normal), 1.0);
+
     // Ambient light (increase a bit to brighten the scene)
-    vec3 ambient = 0.8 * lightColor; // Raised ambient intensity to 0.5
+    vec3 ambient = 0.9 * lightColor; // Raised ambient intensity to 0.5
 
     // Diffuse light
     vec3 norm = normalize(Normal);
@@ -42,7 +46,7 @@ void main() {
     vec3 baseColor = useTexture ? texture(ourTexture, TexCoords).rgb : color;
 
     // Final color (apply lighting and base color)
-    vec3 finalColor = lighting * baseColor;
+    vec3 finalColor = (lighting * baseColor) * 0.5 + 0.2 * Normal;
 
     // Output the final color without gamma correction
     FragColor = vec4(finalColor, 1.0);

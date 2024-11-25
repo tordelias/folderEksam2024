@@ -117,7 +117,4 @@
     <None Include="Resources\Shaders\Light.frag" />
     <None Include="Resources\Shaders\Light.vert" />
   </ItemGroup>
-  <ItemGroup>
-    <Text Include="Data\PointCloud.txt" />
-  </ItemGroup>
 </Project>

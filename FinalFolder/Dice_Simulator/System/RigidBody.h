@@ -18,7 +18,7 @@ public:
     void applyRandomForce(std::vector<std::shared_ptr<Entity>> entities);
     void Update(std::vector<std::shared_ptr<Entity>> entities, float deltaTime); // Added deltaTime parameter
     void normalForceGround(std::shared_ptr<Entity> entity, float deltaTime);
-    glm::vec3 CalculateNormalForce(std::shared_ptr<Entity> entity, std::shared_ptr<Entity> planeEntity, glm::vec3 contactNormal, float dt);
+    glm::vec3 CalculateNormalForce(std::shared_ptr<Entity> entity, double height, float dt);
 
 private:
 	void BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shared_ptr<Entity> planeEntity, float dt);

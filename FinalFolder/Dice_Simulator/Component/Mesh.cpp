@@ -7,25 +7,38 @@
 #include <unordered_map>
 #include <cmath>
 #include <omp.h>
+#include <chrono>
+#include <thread>
 
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/convex_hull_2.h>
-#include <CGAL/Delaunay_triangulation_2.h>
-#include <CGAL/Euclidean_distance.h>
-#include <CGAL/IO/Polyhedron_iostream.h>
+//#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+//#include <CGAL/convex_hull_2.h>
+//#include <CGAL/Delaunay_triangulation_2.h>
+//#include <CGAL/Euclidean_distance.h>
+//#include <CGAL/IO/Polyhedron_iostream.h>
+//
+//
+//typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+//typedef CGAL::Triangulation_vertex_base_2<K> BaseVertex;
+//typedef CGAL::Triangulation_vertex_base_2<K, CGAL::Triangulation_ds_vertex_base_2<BaseVertex>> VertexBase;
+//typedef CGAL::Triangulation_data_structure_2<VertexBase> Tds;
+//typedef CGAL::Delaunay_triangulation_2<K, Tds> Delaunay;
+//
+//// Define a custom vertex with index
+//typedef Delaunay::Vertex_handle Vertex_handle_with_index;
+//typedef K::Point_2 Point_2;
 
-
-typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-typedef CGAL::Triangulation_vertex_base_2<K> BaseVertex;
-typedef CGAL::Triangulation_vertex_base_2<K, CGAL::Triangulation_ds_vertex_base_2<BaseVertex>> VertexBase;
-typedef CGAL::Triangulation_data_structure_2<VertexBase> Tds;
-typedef CGAL::Delaunay_triangulation_2<K, Tds> Delaunay;
-
-// Define a custom vertex with index
-typedef Delaunay::Vertex_handle Vertex_handle_with_index;
-typedef K::Point_2 Point_2;
-
-
+void showLoadingBar(size_t current, size_t total, const std::string& taskName = "", int barWidth = 50) {
+    float progress = static_cast<float>(current) / total;
+    int pos = barWidth * progress;
+    std::cout << "\r" << taskName << " [";
+    for (int j = 0; j < barWidth; ++j) {
+        if (j < pos) std::cout << "=";
+        else if (j == pos) std::cout << ">";
+        else std::cout << " ";
+    }
+    std::cout << "] " << int(progress * 100.0f) << "%";
+    std::flush(std::cout);
+}
 // Cube mesh generation
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::CubeMesh(glm::vec3 color) {
     std::vector<Vertex> vertices = {
@@ -203,13 +216,13 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
             // Friction (random value, for example)
 			if (count % 6 == 0)
             {
-                vertex.friction = 0.9f;
+                vertex.friction = 0.0f;
                 vertex.r = 1.f;
 				vertex.g = 0.f;
 				vertex.b = 0.f;
             }
 			else
-                vertex.friction = 0.2f;
+                vertex.friction = 1.0f;
 			count++;
             // Add vertex to the list
             vertices.push_back(vertex);
@@ -241,147 +254,131 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
     return { vertices, indices };
 }
 
+
+
+
+
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::vec3 color) {
-    // Read the point cloud from the file (with progress bar in Readfile)
-    std::vector<Vertex> vertices = Readfile("Data/32-2-516-156-31.txt", color);
+    // Read the point cloud with full Vertex data
+    std::vector<Vertex> vertices = Readfile("Data/LargeData_centered.txt", color);
     std::vector<unsigned int> indices;
+    std::vector<glm::vec3> vertexNormals(vertices.size(), glm::vec3(0.0f));
 
-    // Step 1: Convert 3D points to 2D points (using x, z)
-    std::vector<Point_2> points2D;
-    std::unordered_map<Point_2, unsigned int> pointIndexMap;
-
-    size_t totalVertices = vertices.size();
-    size_t processedVertices = 0;
-
-    // Progress bar setup
-    int barWidth = 50;
-    std::cout << "adding points to Delaunay..." << std::endl;
+    // Create a mapping from Point_2 to vertex indices using std::map for compatibility with CGAL
+    std::map<Point_2, unsigned int> point_to_index;
+    std::vector<Point_2> points;
+    points.reserve(vertices.size());
 
     for (unsigned int i = 0; i < vertices.size(); ++i) {
-        Point_2 p2d(vertices[i].x, vertices[i].z);
-        points2D.push_back(p2d);
-        pointIndexMap[p2d] = i;  // Store the original index
+        Point_2 pt(vertices[i].x, vertices[i].z); // Using x and z as 2D coordinates
+        points.push_back(pt);
+        point_to_index[pt] = i;
+    }
 
-        // Update the progress bar every 1000 points or at the last point
-        processedVertices++;
-        if (processedVertices % 10000 == 0 || processedVertices == totalVertices) {
-            float progress = static_cast<float>(processedVertices) / totalVertices;
-            int pos = barWidth * progress;
-            std::cout << "\r[";
-            for (int j = 0; j < barWidth; ++j) {
-                if (j < pos) std::cout << "=";
-                else if (j == pos) std::cout << ">";
-                else std::cout << " ";
+    // Perform Delaunay triangulation
+    Delaunay delaunay;
+    delaunay.insert(points.begin(), points.end());
+
+    // Reserve space for indices upfront to minimize reallocations
+    indices.reserve(delaunay.number_of_faces() * 3);
+
+    // Compute normals in parallel
+#pragma omp parallel
+    {
+        std::vector<glm::vec3> localNormals(vertices.size(), glm::vec3(0.0f));
+        std::vector<unsigned int> localIndices;
+
+#pragma omp for nowait
+        for (auto face = delaunay.finite_faces_begin(); face != delaunay.finite_faces_end(); ++face) {
+            // Retrieve vertex indices
+            unsigned int i0 = point_to_index[face->vertex(0)->point()];
+            unsigned int i1 = point_to_index[face->vertex(1)->point()];
+            unsigned int i2 = point_to_index[face->vertex(2)->point()];
+
+            // Store triangle indices
+            localIndices.insert(localIndices.end(), { i0, i1, i2 });
+
+            // Calculate the normal vector for the triangle
+            const glm::vec3 p0(vertices[i0].x, vertices[i0].y, vertices[i0].z);
+            const glm::vec3 p1(vertices[i1].x, vertices[i1].y, vertices[i1].z);
+            const glm::vec3 p2(vertices[i2].x, vertices[i2].y, vertices[i2].z);
+
+            glm::vec3 edge1 = p1 - p0;
+            glm::vec3 edge2 = p2 - p0;
+            glm::vec3 normal = glm::cross(edge1, edge2);
+
+            // Handle degenerate triangles
+            if (glm::dot(normal, normal) < 1e-12f) {
+                // Skip degenerate triangles (too small or collinear)
+                continue;
             }
-            std::cout << "] " << int(progress * 100.0f) << "%";
-            std::flush(std::cout);
+
+
+            // Accumulate normals
+            localNormals[i0] += normal;
+            localNormals[i1] += normal;
+            localNormals[i2] += normal;
+        }
+
+        // Merge local results into the global data structures
+#pragma omp critical
+        {
+            indices.insert(indices.end(), localIndices.begin(), localIndices.end());
+            for (unsigned int i = 0; i < vertices.size(); ++i) {
+                vertexNormals[i] += localNormals[i];
+            }
         }
     }
 
-    std::cout << std::endl;
-
-    // Step 2: Perform Delaunay Triangulation on the 2D points
-    Delaunay dt;
-    dt.insert(points2D.begin(), points2D.end());
-
-    // Step 3: Generate indices based on the triangulation
-    size_t totalFaces = 0;
-    for (auto f = dt.finite_faces_begin(); f != dt.finite_faces_end(); ++f) {
-        totalFaces++;
-    }
-
-    size_t processedFaces = 0;
-    std::cout << "Triangulating faces..." << std::endl;
-
-    for (auto f = dt.finite_faces_begin(); f != dt.finite_faces_end(); ++f) {
-        // Get the three vertices of the triangle in the 2D plane
-        Point_2 p0 = f->vertex(0)->point();
-        Point_2 p1 = f->vertex(1)->point();
-        Point_2 p2 = f->vertex(2)->point();
-
-        // Look up the indices of the original vertices in the pointIndexMap
-        unsigned int idx0 = pointIndexMap[p0];
-        unsigned int idx1 = pointIndexMap[p1];
-        unsigned int idx2 = pointIndexMap[p2];
-
-        // Add indices to the list (three vertices per face)
-        indices.push_back(idx0);
-        indices.push_back(idx1);
-        indices.push_back(idx2);
-
-        // Update the progress bar every 100 faces or at the last face
-        processedFaces++;
-        if (processedFaces % 10000 == 0 || processedFaces == totalFaces) {
-            float progress = static_cast<float>(processedFaces) / totalFaces;
-            int pos = barWidth * progress;
-            std::cout << "\r[";
-            for (int j = 0; j < barWidth; ++j) {
-                if (j < pos) std::cout << "=";
-                else if (j == pos) std::cout << ">";
-                else std::cout << " ";
-            }
-            std::cout << "] " << int(progress * 100.0f) << "%";
-            std::flush(std::cout);
+    // Normalize accumulated normals and assign them to vertices
+#pragma omp parallel for
+    for (int i = 0; i < static_cast<int>(vertices.size()); ++i) {
+        glm::vec3& normal = vertexNormals[i];
+        if (glm::dot(normal, normal) > 1e-12f) {
+            normal = glm::normalize(normal);
         }
+        else {
+            normal = glm::vec3(0.0f, 1.0f, 0.0f); // Fallback for degenerate cases
+        }
+
+        vertices[i].normalx = normal.x;
+        vertices[i].normaly = normal.y;
+        vertices[i].normalz = normal.z;
     }
-
-    std::cout << std::endl;
-
-  //Compute normals for each vertex
-    for (auto& vertex : vertices) {
-        vertex.normalx = 0;
-        vertex.normaly = 0;
-        vertex.normalz = 0;
-    }
-
-    for (size_t i = 0; i < indices.size(); i += 3) {
-        unsigned int idx0 = indices[i];
-        unsigned int idx1 = indices[i + 1];
-        unsigned int idx2 = indices[i + 2];
-
-        Vertex& v0 = vertices[idx0];
-        Vertex& v1 = vertices[idx1];
-        Vertex& v2 = vertices[idx2];
-
-        glm::vec3 p0(v0.x, v0.y, v0.z);
-        glm::vec3 p1(v1.x, v1.y, v1.z);
-        glm::vec3 p2(v2.x, v2.y, v2.z);
-
-        glm::vec3 edge1 = p1 - p0;
-        glm::vec3 edge2 = p2 - p0;
-
-        glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
-
-        v0.normalx += faceNormal.x;
-        v0.normaly += faceNormal.y;
-        v0.normalz += faceNormal.z;
-
-        v1.normalx += faceNormal.x;
-        v1.normaly += faceNormal.y;
-        v1.normalz += faceNormal.z;
-
-        v2.normalx += faceNormal.x;
-        v2.normaly += faceNormal.y;
-        v2.normalz += faceNormal.z;
-    }
-
-    for (auto& vertex : vertices) {
-        glm::vec3 normal(vertex.normalx, vertex.normaly, vertex.normalz);
-        normal = glm::normalize(normal);
-        vertex.normalx = normal.x;
-        vertex.normaly = normal.y;
-        vertex.normalz = normal.z;
-    }
-
-    return { vertices, indices };
+    flipEdgeIfNecessary(vertices, delaunay, point_to_index);
+    return std::make_pair(std::move(vertices), std::move(indices));
 }
 
 
+// flipEdgeIfNecessary(vertices, delaunay, point_to_index);
 
+void Mesh::laplacianSmoothing(std::vector<Vertex>& vertices, std::vector<std::vector<unsigned int>>& vertexNeighbors, float lambda, int iterations) {
+    for (int iter = 0; iter < iterations; ++iter) {
+        std::vector<glm::vec3> newPositions(vertices.size(), glm::vec3(0.0f));
 
+        // Parallelize Laplacian smoothing
+#pragma omp parallel for
+        for (unsigned int i = 0; i < vertices.size(); ++i) {
+            glm::vec3 smoothedPosition(0.0f);
+            unsigned int num_neighbors = vertexNeighbors[i].size();
 
+            for (unsigned int neighbor : vertexNeighbors[i]) {
+                smoothedPosition += glm::vec3(vertices[neighbor].x, vertices[neighbor].y, vertices[neighbor].z);
+            }
 
+            if (num_neighbors > 0) smoothedPosition /= num_neighbors;
+            glm::vec3 originalPosition(vertices[i].x, vertices[i].y, vertices[i].z);
+            newPositions[i] = originalPosition + lambda * (smoothedPosition - originalPosition);
+        }
 
+        // Update vertex positions
+        for (unsigned int i = 0; i < vertices.size(); ++i) {
+            vertices[i].x = newPositions[i].x;
+            vertices[i].y = newPositions[i].y;
+            vertices[i].z = newPositions[i].z;
+        }
+    }
+}
 
 
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::BSplineSurface(glm::vec3 color) {
@@ -622,164 +619,194 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
 
     if (inputFile.is_open()) {
         std::string line;
-        std::getline(inputFile, line);  // Skip header line if there is one
         Vertex point;
 
+        point.r = color.x;
+        point.g = color.y;
+        point.b = color.z;
 
-        // Progress bar setup
-        int barWidth = 50;
-        std::cout << "Loading points..." << std::endl;
+
+        if (std::getline(inputFile, line))
+                totalLines = std::stoi(line);
+
+		std::cout << "Total number of Points: " << totalLines << std::endl;
+		std::cout << "Processing Points" << std::endl;
 
         while (std::getline(inputFile, line))
         {
-            if (sscanf_s(line.c_str(), "%f %f %f", &point.x, &point.z, &point.y) == 3 && processedLines % 200 == 1)
+            if (sscanf_s(line.c_str(), "%f %f %f", &point.x, &point.z, &point.y) == 3 && processedLines % 1000 == 1)
             {
-                point.x -= 608016.02;
-                point.y -= 336.8007;
-                point.z -= 6750620.771;
+
+
 
                 point.u = (point.x - min_x) / (max_x - min_x);  // Normalize x coordinate
                 point.v = (point.z - min_z) / (max_z - min_z);  // Normalize z coordinate
 
-				if (numPointsIncreacedFriction < 50)
-				{
-					point.friction = 0.9f;
-					point.r = 1.0f;
-					point.g = 0.0f;
-					point.b = 0.0f;
-					numPointsIncreacedFriction++;
-				}
-				else
-				{
-                    point.r = color.x;
-                    point.g = color.y;
-                    point.b = color.z;
-					point.friction = 0.1f;
-					numPointsIncreacedFriction++;
-				}
-				if (numPointsIncreacedFriction == 300)
-				{
-					numPointsIncreacedFriction = 0;
-				}
+				//if (numPointsIncreacedFriction < 500)
+				//{
+				//	point.friction = 0.9f;
+				//	point.r = 1.0f;
+				//	point.g = 0.0f;
+				//	point.b = 0.0f;
+				//	numPointsIncreacedFriction++;
+				//}
+				//else
+				//{
+    //                point.r = color.x;
+    //                point.g = color.y;
+    //                point.b = color.z;
+				//	point.friction = 0.f;
+				//	numPointsIncreacedFriction++;
+				//}
+				//if (numPointsIncreacedFriction  >= totalLines % 100)
+				//{
+				//	numPointsIncreacedFriction = 0;
+				//}
 
                 pointCloud.push_back(point);
             }
-
             processedLines++;
-            if (processedLines % 100000 == 0 || processedLines == totalLines) {
-                float progress = static_cast<float>(processedLines) / totalLines;
-                int pos = barWidth * progress;
-                std::cout << "\r[";  // Start overwriting the same line
-                for (int i = 0; i < barWidth; ++i) {
-                    if (i < pos) std::cout << "=";
-                    else if (i == pos) std::cout << ">";
-                    else std::cout << " ";
-                }
-                std::cout << "] " << int(progress * 100.0f) << "%";
-                std::flush(std::cout);
-            }
-        }
+            if (processedLines % 100000 == 0 || processedLines == totalLines) 
+                showLoadingBar(processedLines, totalLines);
 
-        // Ensure the progress bar is at 100% when done
-        float progress = 100;
-        int pos = barWidth * progress;
-        std::cout << "\r[";  // Start overwriting the same line
-        for (int i = 0; i < barWidth; ++i) {
-            if (i < pos) std::cout << "=";
-            else if (i == pos) std::cout << ">";
-            else std::cout << " ";
         }
-        std::cout << "] " << int(progress) << "%";
-        std::flush(std::cout);
-
-        // After the progress bar is complete, print a newline
-        std::cout << std::endl;
+        showLoadingBar(totalLines, totalLines, "");
+        std::cout << std::endl; 
         inputFile.close();
     }
     else {
         std::cerr << "Unable to open the input file for reading." << std::endl;
     }
-
     return pointCloud;
 }
 
-float Mesh::BSplineBasis(int i, int p, float t, const std::vector<float>& knots) {
-    // Out-of-range check
-    if (i < 0 || i >= knots.size() - 1)
-    {
-		std::cerr << "Index out of range!" << std::endl;
-        return 0.0f;
-    }
 
-    // Base case: zero-degree basis function
-    if (p == 0) {
-        // Handle special case for the last knot span
-        if (i == knots.size() - 2) {
-            return (t >= knots[i] && t <= knots[i + 1]) ? 1.0f : 0.0f;
+void Mesh::flipEdgeIfNecessary(std::vector<Vertex>& vertices, Delaunay& triangulation, std::map<Point_2, unsigned int>& point_to_index) {
+    // Loop over all faces in the triangulation
+    for (auto face = triangulation.finite_faces_begin(); face != triangulation.finite_faces_end(); ++face) {
+        // Dereference the iterator to get the Face_handle
+        Delaunay::Face_handle faceHandle = face;
+
+        // Get the vertices of the current triangle
+        Point_2 v0 = faceHandle->vertex(0)->point();
+        Point_2 v1 = faceHandle->vertex(1)->point();
+        Point_2 v2 = faceHandle->vertex(2)->point();
+
+        // Convert points to vertex positions (assuming point_to_index maps Point_2 -> index of the vertex)
+        glm::vec3 p0(vertices[point_to_index[v0]].x, vertices[point_to_index[v0]].y, vertices[point_to_index[v0]].z);
+        glm::vec3 p1(vertices[point_to_index[v1]].x, vertices[point_to_index[v1]].y, vertices[point_to_index[v1]].z);
+        glm::vec3 p2(vertices[point_to_index[v2]].x, vertices[point_to_index[v2]].y, vertices[point_to_index[v2]].z);
+
+        // If the triangle has poor quality, we need to flip its edges
+        if (isPoorQuality(p0, p1, p2)) {
+            // Check the shared edges and find the neighbor
+            for (unsigned int i = 0; i < 3; ++i) {
+                unsigned int idx1 = i;
+                unsigned int idx2 = (i + 1) % 3;
+
+                // Get the neighboring face for this edge (i)
+                auto neighbor = faceHandle->neighbor(i);  // `neighbor(i)` returns a Face_handle
+
+                // Check if the neighboring face is valid and not infinite (boundary)
+                if (neighbor != triangulation.infinite_face()) {
+                    // Get the vertices of the neighboring face
+                    Point_2 v3 = neighbor->vertex(0)->point();
+                    Point_2 v4 = neighbor->vertex(1)->point();
+                    Point_2 v5 = neighbor->vertex(2)->point();
+
+                    // Check if the edge is shared (one of the vertices should be the same)
+                    if ((v0 == v3 || v0 == v4 || v0 == v5) && (v1 == v3 || v1 == v4 || v1 == v5)) {
+                        // Perform edge flip: Replace one triangle with its flipped version
+                        flipTriangleEdges(faceHandle, neighbor); // Pass Face_handle directly (no need to dereference)
+
+
+                        break;
+                    }
+                }
+            }
         }
-        return (t >= knots[i] && t < knots[i + 1]) ? 1.0f : 0.0f;
     }
+}
 
-    // Recursive case: compute alpha and beta
-    float alpha = 0.0f;
-    if (knots[i + p] != knots[i]) {
-        alpha = (t - knots[i]) / (knots[i + p] - knots[i]) * BSplineBasis(i, p - 1, t, knots);
+
+void Mesh::flipTriangleEdges(Delaunay::Face_handle& triangle1, Delaunay::Face_handle& triangle2) {
+    // Flip the shared edge between the two triangles
+    Point_2 v0_1 = triangle1->vertex(0)->point();
+    Point_2 v1_1 = triangle1->vertex(1)->point();
+    Point_2 v2_1 = triangle1->vertex(2)->point();
+
+    Point_2 v0_2 = triangle2->vertex(0)->point();
+    Point_2 v1_2 = triangle2->vertex(1)->point();
+    Point_2 v2_2 = triangle2->vertex(2)->point();
+
+    // Find the shared edge between the two triangles
+    std::vector<Point_2> sharedEdge = findSharedEdge(v0_1, v1_1, v2_1, v0_2, v1_2, v2_2);
+
+    if (sharedEdge.size() == 2) {
+        Point_2 sharedV1 = sharedEdge[0];
+        Point_2 sharedV2 = sharedEdge[1];
+
+        // Flip the edge (swap the diagonals)
+        if (sharedV1 == v0_1 && sharedV2 == v1_1) {
+            // Swap the diagonal between the two triangles
+            swapEdge(v0_2, v2_2, triangle1, triangle2);
+        }
+        else if (sharedV1 == v1_1 && sharedV2 == v2_1) {
+            swapEdge(v0_2, v1_2, triangle1, triangle2);
+        }
+        else if (sharedV1 == v2_1 && sharedV2 == v0_1) {
+            swapEdge(v1_2, v2_2, triangle1, triangle2);
+        }
     }
+}
 
-    float beta = 0.0f;
-    if (knots[i + p + 1] != knots[i + 1]) {
-        beta = (knots[i + p + 1] - t) / (knots[i + p + 1] - knots[i + 1]) * BSplineBasis(i + 1, p - 1, t, knots);
+std::vector<Point_2> Mesh::findSharedEdge(Point_2 v0_1, Point_2 v1_1, Point_2 v2_1, Point_2 v0_2, Point_2 v1_2, Point_2 v2_2) {
+    std::vector<Point_2> sharedEdge;
+    if ((v0_1 == v0_2 || v0_1 == v1_2 || v0_1 == v2_2) &&
+        (v1_1 == v0_2 || v1_1 == v1_2 || v1_1 == v2_2)) {
+        sharedEdge.push_back(v0_1);
+        sharedEdge.push_back(v1_1);
     }
+    if ((v1_1 == v0_2 || v1_1 == v1_2 || v1_1 == v2_2) &&
+        (v2_1 == v0_2 || v2_1 == v1_2 || v2_1 == v2_2)) {
+        sharedEdge.push_back(v1_1);
+        sharedEdge.push_back(v2_1);
+    }
+    return sharedEdge;
+}
 
-    return alpha + beta;
+void Mesh::swapEdge(Point_2 v0, Point_2 v1, Delaunay::Face_handle& triangle1, Delaunay::Face_handle& triangle2) {
+    // Perform edge swap by updating the Delaunay triangulation
+    // Swap the diagonals between the two triangles
+    triangle1->set_vertex(0, triangle2->vertex(1));
+    triangle2->set_vertex(1, triangle1->vertex(2));
+    triangle2->set_vertex(2, triangle1->vertex(0));
+
+    // Update vertex positions and recompute face normals as necessary
+}
+
+
+bool Mesh::isPoorQuality(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
+    glm::vec3 edge1 = v1 - v0;
+    glm::vec3 edge2 = v2 - v0;
+    glm::vec3 edge3 = v2 - v1;
+
+    // Check for large angles (indicating a very long or thin triangle)
+    float angle1 = angleBetween(edge1, edge2);
+    float angle2 = angleBetween(edge2, edge3);
+    float angle3 = angleBetween(edge3, edge1);
+
+    return (angle1 < 0.1f || angle2 < 0.1f || angle3 < 0.1f); // Threshold for "bad" triangles
+}
+
+float Mesh::angleBetween(glm::vec3 v1, glm::vec3 v2) {
+    return acos(glm::dot(glm::normalize(v1), glm::normalize(v2)));
 }
 
 
 
 
 
-std::vector<glm::vec3> Mesh::BarycentricCoordinates(std::vector<unsigned int> indices, std::vector<Vertex> vertices)
-{
-    std::vector<glm::vec3> result;
-	float u, v, w;
-    if (vertices.empty()) {
-		std::cerr << "Vertices list is empty!" << std::endl;
-		return std::vector<glm::vec3>();
-    }
-    for (int i = 0; i < indices.size(); i += 3) 
-    {
-        int index0 = indices[i];
-        int index1 = indices[i + 1];
-        int index2 = indices[i + 2];
-		glm::vec3 v0(vertices[index0].x, vertices[index0].y, vertices[index0].z);
-		glm::vec3 v1(vertices[index1].x, vertices[index1].y, vertices[index1].z);
-		glm::vec3 v2(vertices[index2].x, vertices[index2].y, vertices[index2].z);
-
-        glm::vec3 cpoint = (v0 + v1 + v2) / 3.0f; // get center of triangle 
-
-        glm::vec3 v0v1 = v1 - v0;
-        glm::vec3 v0v2 = v2 - v0;
-        glm::vec3 v0p = cpoint - v0;
-
-        // Computing dot products
-        double dot00 = glm::dot(v0v1, v0v1);
-        double dot01 = glm::dot(v0v1, v0v2);
-        double dot02 = glm::dot(v0v1, v0p);
-        double dot11 = glm::dot(v0v2, v0v2);
-        double dot12 = glm::dot(v0v2, v0p);
-
-        // Computing barycentric coordinates
-        double invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
-        double v = (dot11 * dot02 - dot01 * dot12) * invDenom;
-        double w = (dot00 * dot12 - dot01 * dot02) * invDenom;
-        double u = 1 - v - w;
-		result.push_back(glm::vec3(u, v, w));
-    }
-
-
-
-    return result;
-}
 
 
 
