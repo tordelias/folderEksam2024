@@ -124,7 +124,7 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::SphereMesh(glm::
             float angle = 2 * pi * u; // pi * 2 to get full sphere
             float x = std::cos(angle) * cosUp;
             float y = std::sin(angle) * cosUp;
-            Vertex V1 = Vertex{ x * radius, y * radius, z * radius, x, y, z, u, v };
+            Vertex V1 = Vertex{ x * radius, y * radius, z * radius, color.r, color.g, color.b, u, v };
             vertices.push_back(V1);
         }
 
