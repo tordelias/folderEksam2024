@@ -240,25 +240,42 @@ void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shar
         // If the point is inside the triangle (u, v, w > 0)
         if (u >= 0 && v >= 0 && w >= 0) {
             double height = v0.y * u + v1.y * v + v2.y * w;
-
+            // Adjusting position and velocity if ball is near the ground
             glm::vec3 currentVelocity = transform->velocity;
-			glm::vec3 normal = glm::normalize(glm::normalize(glm::cross(v0v1, v0v2)));
+            glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+
 
             if (transform->position.y < height + groundThreshold) {
-                //glm::vec3 velocityNormal = glm::dot(currentVelocity, normal) * normal;
-                //glm::vec3 velocityTangent = currentVelocity - velocityNormal;
-
-                //// Reflect velocityNormal if object is falling towards the surface
-                //if (glm::dot(currentVelocity, normal) < 0) {
-                //    velocityNormal = -velocityNormal * 0.5f; // Slight energy loss
+                // Stopping downward motion and applying corrective force
+                //if (currentVelocity.y < 0) {
+                //    currentVelocity.y = 0.0f; // Stopping downward motion
                 //}
-                //float friction = 0.1f; // Adjust for realistic sliding
-                //velocityTangent *= (1 - friction);
-                //transform->velocity = velocityNormal + velocityTangent;
+                glm::vec3 velocityNormal = glm::dot(currentVelocity, normal) * normal;
+                glm::vec3 velocityTangent = currentVelocity - velocityNormal;
+                
+                if (glm::dot(currentVelocity, normal) < 0) {
+                    velocityNormal = -velocityNormal * 0.5f; // Slight energy loss
+                }
+                float friction = 0.1f; // Adjust for realistic sliding
+                velocityTangent *= (1 - friction);
+                transform->velocity = velocityNormal + velocityTangent;
                 transform->position.y = height + groundThreshold;
+
+                transform->velocity = currentVelocity;
+
+                // Applying corrective force if sinking
+                if (transform->position.y < height + groundThreshold)
+                {
+                    transform->position.y = height + groundThreshold;
+                }
+
+                // Calculating the normal vector for the slope
+                if (glm::length(normal) == 0.0f) continue; // Skipping degenerate triangles
 
                 float inclineAngle = std::acos(normal.y);
                 glm::vec3 slopeVector = glm::normalize(glm::vec3(normal.x, 0.0f, normal.z)); // Slope direction
+
+                // Adjusting velocity based on slope incline
                 float speedAdjustment = glm::dot(currentVelocity, slopeVector);
                 if (currentVelocity.y > 0) { // Ball is moving upward
                     currentVelocity.y -= speedAdjustment * sin(inclineAngle);
@@ -273,27 +290,25 @@ void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shar
                     currentVelocity.y += speedAdjustment * sin(inclineAngle);
 
                     // Ensuring ball doesn't go through the floor
-                    if (transform->position.y < height + groundThreshold)
-                    {
+                    if (transform->position.y < height + groundThreshold) {
                         transform->position.y = height + groundThreshold;
 
                         currentVelocity.y = 0; // Stopping downward motion
                     }
                 }
 
-                if (glm::abs(normal.y) < 1.0f) 
-                {
-                    glm::vec3 slopeVector = glm::normalize(glm::vec3(normal.x, 0.0f, normal.z));
-                    glm::vec3 gravityAlongSlope = CalculateGravity(0.f, slopeVector, normal);
-                    transform->velocity += gravityAlongSlope;
-                    //applyForce(gravityAlongSlope, entity);
+                transform->velocity = currentVelocity;
+
+
+                // Calculating gravity effect along the slope and apply force
+                if (glm::length(slopeVector) > 0.00000001f) {
+                    glm::vec3 gravityAlongSlope = CalculateGravity(inclineAngle, slopeVector, normal);
+                    applyForce(gravityAlongSlope, entity);
                 }
-
-                return;
+                return; 
             }
-
             applyGravity(entity, dt);
-            return;
+            return; // Exiting after processing the first intersecting triangle
         }
     }
 
@@ -304,28 +319,28 @@ void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shar
 
 glm::vec3 RigidBody::CalculateGravity(float inclineAngle, glm::vec3 slopeVector, glm::vec3 normal)
 {
-    slopeVector = glm::normalize(slopeVector);
+    //slopeVector = glm::normalize(slopeVector);
 
 
-    glm::vec3 gravityForce(0.0f, -gravity, 0.0f);
+    //glm::vec3 gravityForce(0.0f, -gravity, 0.0f);
 
-    // Calculating normal force (perpendicular to the slope)
-    float normalForceMagnitude = glm::dot(gravityForce, normal); // Gravity along the normal
-    glm::vec3 normalForce = normal * normalForceMagnitude;
+    //// Calculating normal force (perpendicular to the slope)
+    //float normalForceMagnitude = glm::dot(gravityForce, normal); // Gravity along the normal
+    //glm::vec3 normalForce = normal * normalForceMagnitude;
 
-    // Calculating gravitational force acting parallel to the slope (slope vector)
-    glm::vec3 gravityParallel = gravityForce - normalForce; // Parallel force along the slope
+    //// Calculating gravitational force acting parallel to the slope (slope vector)
+    //glm::vec3 gravityParallel = gravityForce - normalForce; // Parallel force along the slope
 
-    // Projecting this parallel gravity onto the slope's horizontal direction (slopeVector)
-    glm::vec3 gravityAlongSlope = glm::dot(gravityParallel, normal) * normal;
-	//float angle1 = acos(normal.z / glm::length(normal));
-	//float angle2 = atan(normal.x / normal.z);
- //   float ax = gravity * sin(angle1) * sin(angle2) * cos(angle1); 
-	//float az = gravity * sin(angle1) * cos(angle2) * cos(angle1);
- //   float ay = gravity * ((cos(angle1) * cos(angle1)) - 1);
-	//glm::vec3 gravityAlongSlope = glm::vec3(ax, ay, az);
+    //// Projecting this parallel gravity onto the slope's horizontal direction (slopeVector)
+    //glm::vec3 gravityAlongSlope = glm::dot(gravityParallel, normal) * normal;
+	float angle1 = acos(normal.z / glm::length(normal));
+	float angle2 = atan(normal.x / normal.z);
+    float ax = gravity * sin(angle1) * sin(angle2) * cos(angle1); 
+	float az = gravity * sin(angle1) * cos(angle2) * cos(angle1);
+    float ay = gravity * ((cos(angle1) * cos(angle1)) - 1);
+	glm::vec3 gravityAlongSlope = glm::vec3(ax, ay, az);
 
-    // Applying the force along the slope
+    std::cout << "Gravity along slope: " << gravityAlongSlope.x << ", " << gravityAlongSlope.y << ", " << gravityAlongSlope.z << std::endl;
     return gravityAlongSlope;
 
 }

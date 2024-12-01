@@ -27,8 +27,10 @@ void SpawnSystem::input(GLFWwindow* window, std::shared_ptr<Camera> camera)
 	if (isFPressed && !FPressedLastFrame)
 	{
 		deletelastEntity();
+		FPressedLastFrame = true;
 
 	}
+	FPressedLastFrame = isFPressed;
 
 	if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS && !blaunchDiece)
 	{
