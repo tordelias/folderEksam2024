@@ -182,6 +182,7 @@ copy "$(ProjectDir)Dependency\includes\assimp\lib\assimp-vc143-mt.dll" "$(OutDir
     <ClCompile Include="Resources\Shaders\VBO.cpp" />
     <ClCompile Include="Resources\Texture\Texture.cpp" />
     <ClCompile Include="Resources\Window.cpp" />
+    <ClCompile Include="System\Grid.cpp" />
     <ClCompile Include="System\RigidBody.cpp" />
     <ClCompile Include="System\SpawnSystem.cpp" />
     <ClCompile Include="stb.cpp" />
@@ -199,6 +200,7 @@ copy "$(ProjectDir)Dependency\includes\assimp\lib\assimp-vc143-mt.dll" "$(OutDir
     <ClInclude Include="Resources\Shaders\VBO.h" />
     <ClInclude Include="Resources\Texture\Texture.h" />
     <ClInclude Include="Resources\Window.h" />
+    <ClInclude Include="System\Grid.h" />
     <ClInclude Include="System\RigidBody.h" />
     <ClInclude Include="System\SpawnSystem.h" />
   </ItemGroup>

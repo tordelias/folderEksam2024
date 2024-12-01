@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "../System/Grid.h"
 
 RigidBody::RigidBody()
 {
@@ -65,12 +66,12 @@ void RigidBody::applyRandomForce(std::vector<std::shared_ptr<Entity>> entities)
     }
 }
 
-void RigidBody::Update(std::vector<std::shared_ptr<Entity>> entities, float deltaTime)
+void RigidBody::Update(std::vector<std::shared_ptr<Entity>> entities, std::shared_ptr<Grid> grid, float deltaTime)
 {
     for (auto& entity : entities) {
         if (entity->GetEntityID() == 0) continue;
 
-        BarycentricCoordinates(entity, entities[0], deltaTime);
+        BarycentricCoordinates(entity, entities[0], grid, deltaTime);
 
         if (auto transform = entity->GetComponent<TransformComponent>()) {
             transform->position += transform->velocity * deltaTime;
@@ -127,26 +128,80 @@ glm::vec3 RigidBody::CalculateNormalForce(std::shared_ptr<Entity> entity, double
     return normalForce;
 }
 
+void RigidBody::AddIndicesToCell(std::shared_ptr<Grid> grid, std::shared_ptr<Entity> ground) {
+    if (auto groundMesh = ground->GetComponent<MeshComponent>()) {
+        for (int i = 0; i < groundMesh->indices.size(); i += 3) {
+            int index0 = groundMesh->indices[i];
+            int index1 = groundMesh->indices[i + 1];
+            int index2 = groundMesh->indices[i + 2];
 
-void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shared_ptr<Entity> planeEntity, float dt) {
+            // Apply the transformation to the vertices in world space
+            glm::mat4 transformation = glm::translate(glm::mat4(1.0f), ground->GetComponent<TransformComponent>()->position) *
+                glm::scale(glm::mat4(1.0f), ground->GetComponent<TransformComponent>()->scale);
+
+            glm::vec3 v0 = glm::vec3(transformation * glm::vec4(groundMesh->vertices[index0].x, groundMesh->vertices[index0].y, groundMesh->vertices[index0].z, 1.f));
+            glm::vec3 v1 = glm::vec3(transformation * glm::vec4(groundMesh->vertices[index1].x, groundMesh->vertices[index1].y, groundMesh->vertices[index1].z, 1.f));
+            glm::vec3 v2 = glm::vec3(transformation * glm::vec4(groundMesh->vertices[index2].x, groundMesh->vertices[index2].y, groundMesh->vertices[index2].z, 1.f));
+
+            // Calculate the bounds of the triangle
+            glm::vec3 minBounds = glm::min(glm::min(v0, v1), v2);
+            glm::vec3 maxBounds = glm::max(glm::max(v0, v1), v2);
+
+            // Determine grid cell bounds for the triangle without offsetting twice
+            int minX = static_cast<int>(std::floor((minBounds.x) / grid->m_cellSize));
+            int minY = static_cast<int>(std::floor((minBounds.z) / grid->m_cellSize));
+            int maxX = static_cast<int>(std::floor((maxBounds.x) / grid->m_cellSize));
+            int maxY = static_cast<int>(std::floor((maxBounds.z) / grid->m_cellSize));
+
+            // Add the triangle indices to all intersecting grid cells
+            for (int x = minX; x <= maxX; ++x) {
+                for (int y = minY; y <= maxY; ++y) {
+                    // Make sure to check if the cell is valid
+                    Cell* cell = grid->getCell(x, y);
+                    if (cell) {
+                        // Add the indices to the cell's groundIndices
+                        cell->groundIndices.push_back(index0);
+                        cell->groundIndices.push_back(index1);
+                        cell->groundIndices.push_back(index2);
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shared_ptr<Entity> planeEntity, std::shared_ptr<Grid> grid, float dt) {
     auto transform = entity->GetComponent<TransformComponent>();
     auto planeTransform = planeEntity->GetComponent<TransformComponent>();
     auto planeMesh = planeEntity->GetComponent<MeshComponent>();
+    auto indices = grid->getCell(transform->position)->groundIndices;
+
     if (!transform || !planeTransform || !planeMesh) return;
+
+    if (indices.empty()) {
+        //applyGravity(entity, dt);
+        return;
+    }
+
+    const float epsilon = 1e-4f;
 
     glm::vec3 point = transform->position;
     glm::vec3 ballSize = transform->scale;
     std::vector<Vertex>& planeVertices = planeMesh->vertices;
-    float groundThreshold = 0.1f;  // Tolerance for "ground" contact
+    float groundThreshold = ballSize.y;
 
     if (planeVertices.empty()) return;
 
-    bool collided = false;  // Flag to track if a collision has occurred
-
-    for (int i = 0; i < planeMesh->indices.size(); i += 3) {
-        int index0 = planeMesh->indices[i];
-        int index1 = planeMesh->indices[i + 1];
-        int index2 = planeMesh->indices[i + 2];
+    for (int i = 0; i < indices.size(); i += 3) {
+        int index0 = indices[i];
+        int index1 = indices[i + 1];
+        int index2 = indices[i + 2];
 
         if (index0 >= planeVertices.size() || index1 >= planeVertices.size() || index2 >= planeVertices.size()) {
             std::cerr << "Index out of bounds!" << std::endl;
@@ -175,90 +230,102 @@ void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shar
         double w = (dot00 * dot12 - dot01 * dot02) * invDenom;
         double u = 1.0f - v - w;
 
-        // Check if the barycentric coordinates are valid
-        if (u < -0.001f || v < -0.001f || w < -0.001f) {
-            continue;  // Skip invalid triangles
-        }
+        if (u < -epsilon || v < -epsilon || w < -epsilon)
+            continue;
 
-        // Normalize the barycentric coordinates to ensure they sum to 1
-        float sum = u + v + w;
-        u /= sum;
-        v /= sum;
-        w /= sum;
+        // Skip degenerate triangles
+        if (glm::length(glm::cross(v0v1, v0v2)) < epsilon)
+            continue;
 
-        // Calculate the height at the point using barycentric interpolation
-        float height = v0.y * u + v1.y * v + v2.y * w;
+        // If the point is inside the triangle (u, v, w > 0)
+        if (u >= 0 && v >= 0 && w >= 0) {
+            double height = v0.y * u + v1.y * v + v2.y * w;
 
-        // The point is considered on the ground if it is within the threshold
-        if (u >= -0.001f && v >= -0.001f && w >= -0.001f) {
             glm::vec3 currentVelocity = transform->velocity;
-            collided = true;  // Mark as collided
-            float targetHeight = height + groundThreshold;
+			glm::vec3 normal = glm::normalize(glm::normalize(glm::cross(v0v1, v0v2)));
 
-            // Only adjust the position if it's actually above the ground by more than the threshold
-            if (transform->position.y > targetHeight) {
-                transform->position.y = targetHeight;  // Snap it to the ground
-            }
+            if (transform->position.y < height + groundThreshold) {
+                //glm::vec3 velocityNormal = glm::dot(currentVelocity, normal) * normal;
+                //glm::vec3 velocityTangent = currentVelocity - velocityNormal;
 
-            // Prevent the object from "bouncing" back up
-            if (transform->position.y < targetHeight) {
-                transform->position.y = targetHeight;
-            }
+                //// Reflect velocityNormal if object is falling towards the surface
+                //if (glm::dot(currentVelocity, normal) < 0) {
+                //    velocityNormal = -velocityNormal * 0.5f; // Slight energy loss
+                //}
+                //float friction = 0.1f; // Adjust for realistic sliding
+                //velocityTangent *= (1 - friction);
+                //transform->velocity = velocityNormal + velocityTangent;
+                transform->position.y = height + groundThreshold;
 
-            // Apply friction if collision occurred
-            if (collided) {
-                glm::vec3 normal = glm::normalize(glm::cross(v0v1, v0v2));
-                if (glm::length(normal) == 0.0f) continue;  // Skip degenerate triangles
-
-                glm::vec3 velocityAlongSurface = currentVelocity - glm::dot(currentVelocity, normal) * normal;
+                float inclineAngle = std::acos(normal.y);
                 glm::vec3 slopeVector = glm::normalize(glm::vec3(normal.x, 0.0f, normal.z)); // Slope direction
+                float speedAdjustment = glm::dot(currentVelocity, slopeVector);
+                if (currentVelocity.y > 0) { // Ball is moving upward
+                    currentVelocity.y -= speedAdjustment * sin(inclineAngle);
 
-                // Weighted friction coefficients
-                float friction0 = planeVertices[index0].friction;
-                float friction1 = planeVertices[index1].friction;
-                float friction2 = planeVertices[index2].friction;
-                float frictionCoefficient = u * friction0 + v * friction1 + w * friction2;
+                    // Ensuring ball doesn't go through the floor
+                    if (transform->position.y < height + groundThreshold) {
+                        transform->position.y = height + groundThreshold;
+                        currentVelocity.y = 0; // Stopping upward motion
+                    }
+                }
+                else if (currentVelocity.y < 0) { // Ball is moving downward
+                    currentVelocity.y += speedAdjustment * sin(inclineAngle);
 
-                // Apply friction force to horizontal velocity
-                glm::vec3 frictionForce = -velocityAlongSurface * frictionCoefficient;
-                transform->velocity += frictionForce * dt;
+                    // Ensuring ball doesn't go through the floor
+                    if (transform->position.y < height + groundThreshold)
+                    {
+                        transform->position.y = height + groundThreshold;
 
-                // Apply gravity along the slope if the object is on an incline
-                if (glm::length(slopeVector) > 0.00000001f) {
-                    glm::vec3 gravityAlongSlope = CalculateGravity(v0v1, v0v2);
-                    applyForce(gravityAlongSlope, dt, entity);
+                        currentVelocity.y = 0; // Stopping downward motion
+                    }
+                }
+
+                if (glm::abs(normal.y) < 1.0f) 
+                {
+                    glm::vec3 slopeVector = glm::normalize(glm::vec3(normal.x, 0.0f, normal.z));
+                    glm::vec3 gravityAlongSlope = CalculateGravity(0.f, slopeVector, normal);
+                    transform->velocity += gravityAlongSlope;
+                    //applyForce(gravityAlongSlope, entity);
                 }
 
                 return;
             }
 
             applyGravity(entity, dt);
-            return;  // Object is now on the ground, stop further gravity application
+            return;
         }
     }
 
-    // If no collision happened, continue applying gravity
     applyGravity(entity, dt);
 }
 
 
 
-
-
-
-
-
-
-
-
-glm::vec3 RigidBody::CalculateGravity(glm::vec3 v0, glm::vec3 v1)
+glm::vec3 RigidBody::CalculateGravity(float inclineAngle, glm::vec3 slopeVector, glm::vec3 normal)
 {
-    glm::vec3 normal = glm::normalize(glm::cross(v0, v1));
+    slopeVector = glm::normalize(slopeVector);
+
+
     glm::vec3 gravityForce(0.0f, -gravity, 0.0f);
 
-    float normalForceMagnitude = glm::dot(gravityForce, normal);
+    // Calculating normal force (perpendicular to the slope)
+    float normalForceMagnitude = glm::dot(gravityForce, normal); // Gravity along the normal
     glm::vec3 normalForce = normal * normalForceMagnitude;
 
-    glm::vec3 gravityParallel = gravityForce - normalForce;
-    return gravityParallel;
+    // Calculating gravitational force acting parallel to the slope (slope vector)
+    glm::vec3 gravityParallel = gravityForce - normalForce; // Parallel force along the slope
+
+    // Projecting this parallel gravity onto the slope's horizontal direction (slopeVector)
+    glm::vec3 gravityAlongSlope = glm::dot(gravityParallel, normal) * normal;
+	//float angle1 = acos(normal.z / glm::length(normal));
+	//float angle2 = atan(normal.x / normal.z);
+ //   float ax = gravity * sin(angle1) * sin(angle2) * cos(angle1); 
+	//float az = gravity * sin(angle1) * cos(angle2) * cos(angle1);
+ //   float ay = gravity * ((cos(angle1) * cos(angle1)) - 1);
+	//glm::vec3 gravityAlongSlope = glm::vec3(ax, ay, az);
+
+    // Applying the force along the slope
+    return gravityAlongSlope;
+
 }

@@ -5,6 +5,7 @@ class Shader;
 class Texture; 
 class TransformComponent;
 class RigidBody;
+class Grid; 
 class EntityManager
 {
 public:
@@ -29,6 +30,7 @@ private:
 	std::vector<std::shared_ptr<Texture>> textures;
 	std::shared_ptr<Shader> shader;	
 	std::shared_ptr<RigidBody> rigidbody;
+	std::shared_ptr<Grid> grid;
 
 };
 

@@ -11,15 +11,14 @@
 #include <glm/gtx/quaternion.hpp>     
 #include "../Resources/Texture/Texture.h"
 #include <glm/gtc/type_ptr.hpp>
-#include "../Resources/Texture/Texture.h"
 #include <vector>
 #include <memory>
-#include "../Resources/Shaders/shaderClass.h"
 #include "../System/RigidBody.h"
+#include "../System/Grid.h"
 
 
 
-EntityManager::EntityManager(std::shared_ptr<Shader> shaderprogram) : EntityCount(0), shader(shaderprogram), rigidbody(std::make_shared<RigidBody>())
+EntityManager::EntityManager(std::shared_ptr<Shader> shaderprogram) : EntityCount(0), shader(shaderprogram), rigidbody(std::make_shared<RigidBody>()), grid(std::make_shared<Grid>(10000, 10000, 100))
 {
 }
 
@@ -29,12 +28,27 @@ EntityManager::~EntityManager()
 
 void EntityManager::Update()
 {
+	for (auto& entity : entities)
+	{
+        Cell* newCell = grid->getCell(entity->GetComponent<TransformComponent>()->position);
+		if (newCell == nullptr)
+		{
+			continue;
+		}
+        if (newCell != entity->ownerCell)
+        {
+            grid->RemoveBallFromCell(entity, entity->ownerCell);
+            grid->AddBaLL(entity, newCell);
+            entity->ownerCell = newCell;
+        }
+	}
 }
 
 
 void EntityManager::Render(glm::mat4 viewproj, float dt)
 {
-	rigidbody->Update(entities, dt);
+	Update();
+	rigidbody->Update(entities, grid, dt);
     int textureCount = 0;
     for (auto& entity : entities)
     {
@@ -116,6 +130,14 @@ void EntityManager::AddEntity(std::shared_ptr<Entity>& entity)
     entity->SetEntityID(EntityCount);
     ++EntityCount;
 	entities.push_back(entity); //use smart pointers spawnsystem breakes here!
+    if (entity->GetEntityID() == 0)
+    {
+		rigidbody->AddIndicesToCell(grid, entity);
+    }
+    else
+	{
+		grid->AddBaLL(entity);
+	}
 }
 
 std::vector<std::shared_ptr<Entity>> EntityManager::GetEntities() const

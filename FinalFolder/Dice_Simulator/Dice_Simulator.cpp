@@ -50,8 +50,8 @@ int main()
     //spawnSystem->SpawnEntity(0, 0, 0, "Resources/Texture/Textures/sky.jpg", "Cube", 10000.0f);
 
 	std::shared_ptr<Entity> entity = std::make_shared<Entity>();
-	entity->AddComponent<TransformComponent>(glm::vec3(0,0,0), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.f));
-	entity->AddComponent<MeshComponent>("PointCloud", glm::vec3(0.f, 1.f, 0.f), "");
+	entity->AddComponent<TransformComponent>(glm::vec3(0,0,0), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(10.f));
+	entity->AddComponent<MeshComponent>("Torus", glm::vec3(0.f, 1.f, 0.f), "");
 	manager->AddEntity(entity);
 	glPointSize(1.0f);
 
@@ -77,6 +77,7 @@ int main()
          currentTime = glfwGetTime();   // Get the current time
         deltaTime = static_cast<float>(currentTime - lastTime); // Calculate deltaTime
         lastTime = currentTime;
+
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

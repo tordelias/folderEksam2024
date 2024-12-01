@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <memory>
 #include <typeindex>
+#include "System/Grid.h"
 
 class VAO;
 class VBO;
@@ -32,6 +33,9 @@ public:
 
     void initalize();
     void render();
+
+    Cell* ownerCell = nullptr;
+    int cellvectorindex = -1;
 private:
     std::unordered_map<std::type_index, std::unique_ptr<Component>> components;
 };

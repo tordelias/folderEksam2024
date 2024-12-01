@@ -222,7 +222,7 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
 				vertex.b = 0.f;
             }
 			else
-                vertex.friction = 1.0f;
+                vertex.friction = 0.0f;
 			count++;
             // Add vertex to the list
             vertices.push_back(vertex);
@@ -260,7 +260,7 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
 
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::vec3 color) {
     // Read the point cloud with full Vertex data
-    std::vector<Vertex> vertices = Readfile("Data/LargeData_centered.txt", color);
+    std::vector<Vertex> vertices = Readfile("Data/SmallData_centered.txt", color);
     std::vector<unsigned int> indices;
     std::vector<glm::vec3> vertexNormals(vertices.size(), glm::vec3(0.0f));
 
@@ -308,7 +308,7 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
             glm::vec3 normal = glm::cross(edge1, edge2);
 
             // Handle degenerate triangles
-            if (glm::dot(normal, normal) < 1e-12f) {
+            if (glm::dot(normal, normal) < 0.f) {
                 // Skip degenerate triangles (too small or collinear)
                 continue;
             }
@@ -634,7 +634,7 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
 
         while (std::getline(inputFile, line))
         {
-            if (sscanf_s(line.c_str(), "%f %f %f", &point.x, &point.z, &point.y) == 3 && processedLines % 1000 == 1)
+            if (sscanf_s(line.c_str(), "%f %f %f", &point.x, &point.z, &point.y) == 3 )
             {
 
 
