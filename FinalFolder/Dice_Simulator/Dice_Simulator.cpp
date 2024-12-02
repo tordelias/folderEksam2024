@@ -55,8 +55,8 @@ int main()
 	manager->AddEntity(entity);
 	glPointSize(1.0f);
 
-    spawnSystem->SpawnEntity(20, 0, -10, "Resources/Texture/Textures/beako.png");
-    spawnSystem->SpawnEntity(0, 0, -10, "Resources/Texture/Textures/beako.png");
+    //spawnSystem->SpawnEntity(20, 0, -10, "Resources/Texture/Textures/beako.png");
+    //spawnSystem->SpawnEntity(0, 0, -10, "Resources/Texture/Textures/beako.png");
     spawnSystem->SpawnEntity(-20, 0, -10, "");
 
 

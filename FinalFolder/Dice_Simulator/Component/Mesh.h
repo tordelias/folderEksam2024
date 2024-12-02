@@ -33,11 +33,13 @@ class Mesh
 public:
     std::pair<std::vector<Vertex>, std::vector<unsigned int>> CubeMesh(glm::vec3 color);
     std::pair<std::vector<Vertex>, std::vector<unsigned int>> SphereMesh(glm::vec3 color);
+    std::pair<std::vector<Vertex>, std::vector<unsigned int>> TwoHillFlatMiddle(glm::vec3 color);
     std::pair<std::vector<Vertex>, std::vector<unsigned int>> CylinderMesh(glm::vec3 color);
     std::pair<std::vector<Vertex>, std::vector<unsigned int>> ConeMesh(glm::vec3 color);
     std::pair<std::vector<Vertex>, std::vector<unsigned int>> TorusMesh(glm::vec3 color);
 	std::pair<std::vector<Vertex>, std::vector<unsigned int>> PointCloud(glm::vec3 color);
 	std::pair<std::vector<Vertex>, std::vector<unsigned int>> BSplineSurface(glm::vec3 color);
+    std::pair<std::vector<Vertex>, std::vector<unsigned int>> Spline(glm::vec3 color, glm::vec3 ownerPos, std::vector<glm::vec3>& controlpoints);
 void MakeBiquadraticSurface(const int n_u, const int n_v, int d_u, int d_v, std::vector<float> mu, std::vector<float> mv, std::vector<glm::vec3> mc);
 private:
 	glm::vec3 deBoorSurface(int d_u, int d_v, std::vector<float> mu, std::vector<float> mv, std::vector<glm::vec3> mc, float u, float v, const int n_u, const int n_v);

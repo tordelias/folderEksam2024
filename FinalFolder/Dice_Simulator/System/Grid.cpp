@@ -47,7 +47,7 @@ Cell* Grid::getCell(int x, int y)
 
     if (offsetX < 0 || offsetX >= m_numXCells * 2 || offsetY < 0 || offsetY >= m_numYCells * 2)
     {
-        std::cerr << "Grid index out of bounds!  -GetCell" << std::endl;
+       // std::cerr << "Grid index out of bounds!  -GetCell" << std::endl;
         return nullptr;
     }
 

@@ -29,3 +29,17 @@ struct MeshComponent : public Component {
 
     MeshComponent(const char* figure = "", const glm::vec3& color = glm::vec3(1,1,1), const char* texture = "");
 };
+class Entity;
+struct SplineComponent : public Component
+{
+public:
+
+	std::vector<Vertex> vertices;
+	std::vector<unsigned int> indices;
+	std::vector<glm::vec3> controllpoints;
+    std::shared_ptr<Entity> owner; 
+    std::shared_ptr<Entity> spline;
+    glm::vec3 startpos; 
+	SplineComponent(std::shared_ptr<Entity> ownerptr);
+    void CalculateBSpline();
+};

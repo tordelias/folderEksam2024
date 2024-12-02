@@ -13,7 +13,7 @@ public:
 
 class Grid
 {
-    //friend class Collision;
+    friend class RigidBody;
 public:
     Grid(int width, int height, int cellSize);
     ~Grid();
@@ -33,12 +33,13 @@ public:
     int m_numXCells;
     int m_numYCells;
     int m_cellSize;
+    std::vector<Cell> m_cells;
+    int m_width;
+	int m_height;
 
 private:
     //|-----------------------------------------------------------------------------|
     //|                                Private variables                            |
     //|-----------------------------------------------------------------------------|
-    std::vector<Cell> m_cells;
-    int m_width;
-    int m_height;
+;
 };

@@ -13,6 +13,7 @@ public:
 	~EntityManager();
 	void Update();
 	void Render(glm::mat4 viewproj, float dt);
+	void RenderSpline(glm::mat4 viewproj, float dt);
 	void ClearData();
 	bool HasNoEntities();
 	void AddEntity(std::shared_ptr<Entity>& entity);
@@ -26,6 +27,7 @@ private:
 	void initalizeMesh(std::shared_ptr<Entity>& entity);
 	void initalizeTexture(std::shared_ptr<Entity>& entity);
 	std::vector<std::shared_ptr<Entity>> entities;
+	std::vector<std::shared_ptr<Entity>> splines;
 	int EntityCount;
 	std::vector<std::shared_ptr<Texture>> textures;
 	std::shared_ptr<Shader> shader;	

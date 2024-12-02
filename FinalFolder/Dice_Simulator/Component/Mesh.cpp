@@ -152,6 +152,63 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::SphereMesh(glm::
     return { vertices, indices };
 }
 
+std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TwoHillFlatMiddle(glm::vec3 color)
+{
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+
+    const float hillHeight = 2.0f; // Height of the hills
+    const float hillWidth = 2.0f;  // Width of the hill base
+    const float flatWidth = 4.0f;  // Width of the flat middle area
+    const float friction = 0.0f;   // Friction coefficient
+
+    // Define positions
+    // Flat middle
+    vertices.push_back({ -flatWidth / 2, 0, 0, color.x, color.y, color.z, 0, 0, 0, 1, 0, 0, friction }); // 0
+    vertices.push_back({ flatWidth / 2, 0, 0, color.x, color.y, color.z, 1, 0, 0, 1, 0, 0, friction });  // 1
+    vertices.push_back({ -flatWidth / 2, 0, -flatWidth, color.x, color.y, color.z, 0, 1, 0, 1, 0, 0, friction }); // 2
+    vertices.push_back({ flatWidth / 2, 0, -flatWidth, color.x, color.y, color.z, 1, 1, 0, 1, 0, 0, friction });  // 3
+
+    // Hill 1
+    vertices.push_back({ -flatWidth / 2 - hillWidth, hillHeight, 0, color.x, color.y, color.z, 0, 0, 0, 1, 0, 0, friction }); // 4
+    vertices.push_back({ -flatWidth / 2 - hillWidth, hillHeight, -flatWidth, color.x, color.y, color.z, 0, 1, 0, 1, 0, 0, friction }); // 5
+
+    // Hill 2
+    vertices.push_back({ flatWidth / 2 + hillWidth, hillHeight, 0, color.x, color.y, color.z, 1, 0, 0, 1, 0, 0, friction });  // 6
+    vertices.push_back({ flatWidth / 2 + hillWidth, hillHeight, -flatWidth, color.x, color.y, color.z, 1, 1, 0, 1, 0, 0, friction }); // 7
+
+    // Define indices
+    // Flat middle
+    indices.push_back(0);
+    indices.push_back(2);
+    indices.push_back(1);
+
+    indices.push_back(1);
+    indices.push_back(2);
+    indices.push_back(3);
+
+    // Hill 1
+    indices.push_back(0);
+    indices.push_back(4);
+    indices.push_back(2);
+
+    indices.push_back(2);
+    indices.push_back(4);
+    indices.push_back(5);
+
+    // Hill 2
+    indices.push_back(1);
+    indices.push_back(3);
+    indices.push_back(6);
+
+    indices.push_back(3);
+    indices.push_back(7);
+    indices.push_back(6);
+
+    return { vertices, indices };
+}
+
+
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::CylinderMesh(glm::vec3 color)
 {
     std::vector<Vertex> vertices;
@@ -216,13 +273,13 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
             // Friction (random value, for example)
 			if (count % 6 == 0)
             {
-                vertex.friction = 0.0f;
+                vertex.friction = 1.0f;
                 vertex.r = 1.f;
 				vertex.g = 0.f;
 				vertex.b = 0.f;
             }
 			else
-                vertex.friction = 0.0f;
+                vertex.friction = 0.f;
 			count++;
             // Add vertex to the list
             vertices.push_back(vertex);
@@ -254,35 +311,34 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
     return { vertices, indices };
 }
 
-
-
-
-
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::vec3 color) {
-    // Read the point cloud with full Vertex data
     std::vector<Vertex> vertices = Readfile("Data/SmallData_centered.txt", color);
     std::vector<unsigned int> indices;
     std::vector<glm::vec3> vertexNormals(vertices.size(), glm::vec3(0.0f));
 
-    // Create a mapping from Point_2 to vertex indices using std::map for compatibility with CGAL
     std::map<Point_2, unsigned int> point_to_index;
     std::vector<Point_2> points;
     points.reserve(vertices.size());
 
+    // Display progress for the vertex loop
+    size_t step = std::max<size_t>(1, vertices.size() / 100);
     for (unsigned int i = 0; i < vertices.size(); ++i) {
         Point_2 pt(vertices[i].x, vertices[i].z); // Using x and z as 2D coordinates
         points.push_back(pt);
         point_to_index[pt] = i;
+
+        // Update the loading bar
+        if (i % step == 0 || i == vertices.size() - 1) {
+            showLoadingBar(i + 1, vertices.size(), "Processing Vertices");
+        }
     }
+    std::cout << std::endl; // Finish the line after the loading bar
 
     // Perform Delaunay triangulation
     Delaunay delaunay;
     delaunay.insert(points.begin(), points.end());
-
-    // Reserve space for indices upfront to minimize reallocations
     indices.reserve(delaunay.number_of_faces() * 3);
 
-    // Compute normals in parallel
 #pragma omp parallel
     {
         std::vector<glm::vec3> localNormals(vertices.size(), glm::vec3(0.0f));
@@ -290,15 +346,12 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
 
 #pragma omp for nowait
         for (auto face = delaunay.finite_faces_begin(); face != delaunay.finite_faces_end(); ++face) {
-            // Retrieve vertex indices
             unsigned int i0 = point_to_index[face->vertex(0)->point()];
             unsigned int i1 = point_to_index[face->vertex(1)->point()];
             unsigned int i2 = point_to_index[face->vertex(2)->point()];
 
-            // Store triangle indices
             localIndices.insert(localIndices.end(), { i0, i1, i2 });
 
-            // Calculate the normal vector for the triangle
             const glm::vec3 p0(vertices[i0].x, vertices[i0].y, vertices[i0].z);
             const glm::vec3 p1(vertices[i1].x, vertices[i1].y, vertices[i1].z);
             const glm::vec3 p2(vertices[i2].x, vertices[i2].y, vertices[i2].z);
@@ -307,20 +360,15 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
             glm::vec3 edge2 = p2 - p0;
             glm::vec3 normal = glm::cross(edge1, edge2);
 
-            // Handle degenerate triangles
             if (glm::dot(normal, normal) < 0.f) {
-                // Skip degenerate triangles (too small or collinear)
                 continue;
             }
 
-
-            // Accumulate normals
             localNormals[i0] += normal;
             localNormals[i1] += normal;
             localNormals[i2] += normal;
         }
 
-        // Merge local results into the global data structures
 #pragma omp critical
         {
             indices.insert(indices.end(), localIndices.begin(), localIndices.end());
@@ -330,9 +378,11 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
         }
     }
 
-    // Normalize accumulated normals and assign them to vertices
+    // Normalize accumulated normals
+    size_t totalVertices = vertices.size();
+    step = std::max<size_t>(1, totalVertices / 100);
 #pragma omp parallel for
-    for (int i = 0; i < static_cast<int>(vertices.size()); ++i) {
+    for (int i = 0; i < static_cast<int>(totalVertices); ++i) {
         glm::vec3& normal = vertexNormals[i];
         if (glm::dot(normal, normal) > 1e-12f) {
             normal = glm::normalize(normal);
@@ -344,7 +394,14 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
         vertices[i].normalx = normal.x;
         vertices[i].normaly = normal.y;
         vertices[i].normalz = normal.z;
+
+        // Update the loading bar
+        if (i % step == 0 || i == static_cast<int>(totalVertices - 1)) {
+            showLoadingBar(i + 1, totalVertices, "Normalizing Vertices");
+        }
     }
+    std::cout << std::endl; // Finish the line after the loading bar
+
     flipEdgeIfNecessary(vertices, delaunay, point_to_index);
     return std::make_pair(std::move(vertices), std::move(indices));
 }
@@ -459,6 +516,74 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::BSplineSurface(g
 
     return { m_vertices, m_indices };
 }
+
+std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::Spline(glm::vec3 color, glm::vec3 ownerPos, std::vector<glm::vec3>& controllpoints) {
+    m_vertices.clear();
+    m_indices.clear();
+
+    const int degree = 2;
+    controllpoints.push_back(ownerPos);
+
+    if (controllpoints.size() < degree + 1) {
+        std::cerr << "Insufficient control points for spline calculation." << std::endl;
+        return { {}, {} };
+    }
+
+    const int numU = controllpoints.size();
+    std::vector<float> uKnots;
+
+    // U Knot Vector
+    for (int i = 0; i < (numU + degree + 1); i++) {
+        if (i <= degree) {
+            uKnots.push_back(0.0f);
+        }
+        else if (i >= numU) {
+            uKnots.push_back(numU - degree); // Normalize the end knot
+        }
+        else {
+            uKnots.push_back(static_cast<float>(i - degree)); // Interior knots
+        }
+    }
+
+    float spacing = 0.1f;
+    float min = uKnots[degree];
+    float max = uKnots[numU]; // Corrected to get the last valid knot
+    int nu = static_cast<int>((max - min) / spacing) + 1;
+
+    for (int i = 0; i < nu; ++i) {
+        float u = min + i * spacing;
+		//calculates the points for the B-Spline curve
+        glm::vec3 splinePoint = deBoor(degree, degree, uKnots, controllpoints, u);
+
+		//fills the vertices with the spline points
+
+        Vertex vertex;
+        vertex.x = splinePoint.x;
+        vertex.y = splinePoint.y;
+        vertex.z = splinePoint.z;
+        vertex.r = color.r;
+        vertex.g = color.g;
+        vertex.b = color.b;
+        vertex.u = static_cast<float>(i) / (nu - 1);
+        vertex.v = 0.0f;
+        vertex.normalx = 0.0f;
+        vertex.normaly = 1.0f;
+        vertex.normalz = 0.0f;
+
+        m_vertices.push_back(vertex);
+    }
+
+    for (int i = 0; i < nu - 1; ++i) {
+        m_indices.push_back(i);
+        m_indices.push_back(i + 1);
+    }
+
+    //std::cout << "m_vertices size: " << m_vertices.size() << std::endl;
+    //std::cout << "m_indices size: " << m_indices.size() << std::endl;
+
+    return { m_vertices, m_indices };
+}
+
 
 void Mesh::MakeBiquadraticSurface(const int n_u, const int n_v, int d_u, int d_v, std::vector<float> mu, std::vector<float> mv, std::vector<glm::vec3> mc)
 {
@@ -621,9 +746,9 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
         std::string line;
         Vertex point;
 
-        point.r = color.x;
-        point.g = color.y;
-        point.b = color.z;
+        //point.r = color.x;
+        //point.g = color.y;
+        //point.b = color.z;
 
 
         if (std::getline(inputFile, line))
@@ -632,44 +757,41 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
 		std::cout << "Total number of Points: " << totalLines << std::endl;
 		std::cout << "Processing Points" << std::endl;
 
-        while (std::getline(inputFile, line))
-        {
-            if (sscanf_s(line.c_str(), "%f %f %f", &point.x, &point.z, &point.y) == 3 )
-            {
-
-
-
+        while (std::getline(inputFile, line)) {
+            if (sscanf_s(line.c_str(), "%f %f %f", &point.x, &point.z, &point.y) == 3) {
                 point.u = (point.x - min_x) / (max_x - min_x);  // Normalize x coordinate
                 point.v = (point.z - min_z) / (max_z - min_z);  // Normalize z coordinate
 
-				//if (numPointsIncreacedFriction < 500)
-				//{
-				//	point.friction = 0.9f;
-				//	point.r = 1.0f;
-				//	point.g = 0.0f;
-				//	point.b = 0.0f;
-				//	numPointsIncreacedFriction++;
-				//}
-				//else
-				//{
-    //                point.r = color.x;
-    //                point.g = color.y;
-    //                point.b = color.z;
-				//	point.friction = 0.f;
-				//	numPointsIncreacedFriction++;
-				//}
-				//if (numPointsIncreacedFriction  >= totalLines % 100)
-				//{
-				//	numPointsIncreacedFriction = 0;
-				//}
+                if (processedLines < 50) {  // Apply red to the first 50 points only
+                    point.friction = 0.5f;
+                    point.r = 1.0f;  // Red
+                    point.g = 0.0f;
+                    point.b = 0.0f;
+                }
+                else {
+                    point.r = color.x;  // Use custom color for the rest
+                    point.g = color.y;
+                    point.b = color.z;
+                    point.friction = 0.0f;
+                }
 
                 pointCloud.push_back(point);
             }
-            processedLines++;
-            if (processedLines % 100000 == 0 || processedLines == totalLines) 
-                showLoadingBar(processedLines, totalLines);
 
+            numPointsIncreacedFriction++;
+            processedLines++;
+
+            // Reset numPointsIncreacedFriction less frequently, if necessary
+            if (numPointsIncreacedFriction >= 1000000) {
+                numPointsIncreacedFriction = 0;
+            }
+
+            // Update loading bar
+            if (processedLines % 100000 == 0 || processedLines == totalLines) {
+                showLoadingBar(processedLines, totalLines);
+            }
         }
+
         showLoadingBar(totalLines, totalLines, "");
         std::cout << std::endl; 
         inputFile.close();

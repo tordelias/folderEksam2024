@@ -18,14 +18,18 @@ public:
     void applyGravity(std::shared_ptr<Entity> entity, float deltaTime);
     void applyRandomForce(std::vector<std::shared_ptr<Entity>> entities);
     void Update(std::vector<std::shared_ptr<Entity>> entities, std::shared_ptr<Grid> grid, float deltaTime); // Added deltaTime parameter
-    void normalForceGround(std::shared_ptr<Entity> entity, float deltaTime);
-    glm::vec3 CalculateNormalForce(std::shared_ptr<Entity> entity, double height, float dt);
 	void AddIndicesToCell(std::shared_ptr<Grid> Grid, std::shared_ptr<Entity> ground);
 
 private:
+	void UpdateCollision(std::shared_ptr<Grid> grid, float dt);
+	void CheckCollision(std::shared_ptr<Entity>& object, std::vector<std::shared_ptr<Entity>>& objectToCheck, int startingIndex, float dt);
+    void  SphereCollison(std::shared_ptr<Entity>& objA, std::shared_ptr<Entity>& objB, float DeltaTime);
+	void ObjectCollisionResponse(std::shared_ptr<Entity>& objA, std::shared_ptr<Entity>& objB);
+
 	void BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shared_ptr<Entity> planeEntity, std::shared_ptr<Grid> grid, float dt);
-    void applyGravityOnSlope(std::shared_ptr<Entity> entity, float dt, const glm::vec3& gravityDirection);
-    glm::vec3 CalculateGravity(float inclineAngle, glm::vec3 slopeVector, glm::vec3 normal);
+    glm::vec3 CalculateGravity(float inclineAngle, glm::vec3 slopeVector, glm::vec3 normal, float frictionCoefficient);
+
+
     float gravity = 9.81f;
     float mass = 1.0f;
     const float bounceThreshold = 2.f;       // Minimum velocity to trigger bounce

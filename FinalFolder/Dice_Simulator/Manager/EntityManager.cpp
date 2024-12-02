@@ -18,7 +18,7 @@
 
 
 
-EntityManager::EntityManager(std::shared_ptr<Shader> shaderprogram) : EntityCount(0), shader(shaderprogram), rigidbody(std::make_shared<RigidBody>()), grid(std::make_shared<Grid>(10000, 10000, 100))
+EntityManager::EntityManager(std::shared_ptr<Shader> shaderprogram) : EntityCount(0), shader(shaderprogram), rigidbody(std::make_shared<RigidBody>()), grid(std::make_shared<Grid>(1000, 1000, 50))
 {
 }
 
@@ -45,13 +45,12 @@ void EntityManager::Update()
 }
 
 
-void EntityManager::Render(glm::mat4 viewproj, float dt)
-{
-	Update();
-	rigidbody->Update(entities, grid, dt);
+void EntityManager::Render(glm::mat4 viewproj, float dt) {
+    Update();
+    rigidbody->Update(entities, grid, dt);
     int textureCount = 0;
-    for (auto& entity : entities)
-    {
+
+    for (auto& entity : entities) {
         auto meshComponent = entity->GetComponent<MeshComponent>();
         if (meshComponent == nullptr)
             continue;
@@ -59,7 +58,6 @@ void EntityManager::Render(glm::mat4 viewproj, float dt)
         auto transform = entity->GetComponent<TransformComponent>();
         if (transform == nullptr) continue;
 
-        // Model matrix calculations
         glm::mat4 model = glm::mat4(1.0f);
         glm::quat quaternion = glm::quat(transform->rotation);
         glm::mat4 rotationMatrix = glm::toMat4(quaternion);
@@ -69,9 +67,8 @@ void EntityManager::Render(glm::mat4 viewproj, float dt)
         model *= rotationMatrix;
 
         glUniformMatrix4fv(glGetUniformLocation(shader->ID, "camMatrix"), 1, GL_FALSE, glm::value_ptr(viewproj * model));
-
         bool hasTexture = std::string(meshComponent->TexturePath) != "";
-		glUniform1i(glGetUniformLocation(shader->ID, "useTexture"), hasTexture); // Set useTexture to true if the entity has a texture
+        glUniform1i(glGetUniformLocation(shader->ID, "useTexture"), hasTexture);
 
         if (hasTexture) {
             glBindTexture(GL_TEXTURE_2D, textures[textureCount]->texture);
@@ -81,32 +78,59 @@ void EntityManager::Render(glm::mat4 viewproj, float dt)
             glBindTexture(GL_TEXTURE_2D, 0);
         }
 
-        //if (entity->GetEntityID() == 0)
-        //{
-        //    entity->vao->Bind();
-        //    entity->vbo->Bind();
+        entity->vao->Bind();
+        entity->vbo->Bind();
+        entity->ebo->Bind();
 
-        //    glDrawArrays(GL_POINTS, 0, meshComponent->vertices.size());
+        glDrawElements(GL_TRIANGLES, meshComponent->indices.size(), GL_UNSIGNED_INT, 0);
 
-        //    // Unbind VAO, VBO, and EBO after drawing
-        //    entity->vao->Unbind();
-        //    entity->vbo->Unbind();
-        //}
-        //else
-        //{
-            // Bind VAO, VBO, and EBO for drawing
-            entity->vao->Bind();
-            entity->vbo->Bind();
-            entity->ebo->Bind();
-
-            glDrawElements(GL_TRIANGLES, meshComponent->indices.size(), GL_UNSIGNED_INT, 0);
-
-            // Unbind VAO, VBO, and EBO after drawing
-            entity->vao->Unbind();
-            entity->vbo->Unbind();
-            entity->ebo->Unbind();
-        //}
+        entity->vao->Unbind();
+        entity->vbo->Unbind();
+        entity->ebo->Unbind();
     }
+
+    // Render splines and reset state
+    RenderSpline(viewproj, dt);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+    glUseProgram(shader->ID); // Ensure the correct shader program is still in use
+}
+
+
+void EntityManager::RenderSpline(glm::mat4 viewproj, float dt)
+{
+    for (auto spline : splines)
+    {
+        auto splineComponent = spline->GetComponent<SplineComponent>();
+        if (splineComponent == nullptr)
+            continue;
+		splineComponent->CalculateBSpline();
+        auto transform = spline->GetComponent<TransformComponent>();
+        if (transform == nullptr) continue;
+        // Model matrix calculations
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.f));
+        model = glm::scale(model, transform->scale);
+        glUniformMatrix4fv(glGetUniformLocation(shader->ID, "camMatrix"), 1, GL_FALSE, glm::value_ptr(viewproj * model));
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+        // Bind VAO, VBO, and EBO for drawing
+        splineComponent->spline->vao->Bind();
+        splineComponent->spline->vbo->Bind();
+        splineComponent->spline->ebo->Bind();
+        glDrawElements(GL_LINES, splineComponent->indices.size(), GL_UNSIGNED_INT, 0);
+        // Unbind VAO, VBO, and EBO after drawing
+        splineComponent->spline->vao->Unbind();
+        splineComponent->spline->vbo->Unbind();
+        //std::cout << "Drawing spline with indices size: " << splineComponent->indices.size() << std::endl;
+
+        splineComponent->spline->ebo->Unbind();
+    }
+
+    glUseProgram(shader->ID); // Rebind the shader program for further rendering.
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+
 }
 
 
@@ -137,6 +161,10 @@ void EntityManager::AddEntity(std::shared_ptr<Entity>& entity)
     else
 	{
 		grid->AddBaLL(entity);
+	}
+	if (entity->HasComponent<SplineComponent>())
+	{
+		splines.push_back(entity);
 	}
 }
 
@@ -196,6 +224,33 @@ void EntityManager::initalizeMesh(std::shared_ptr<Entity>& entity)
     entity->vao->Unbind();
     entity->vbo->Unbind();
     entity->ebo->Unbind();
+
+    if (entity->HasComponent<SplineComponent>()) {
+        auto splineComp = entity->GetComponent<SplineComponent>();
+
+        // Bind Spline VAO and VBO
+        splineComp->spline->vao->Bind();
+        splineComp->spline->vbo->Bind();
+
+        // Upload vertex data
+        glBufferData(GL_ARRAY_BUFFER, splineComp->vertices.size() * sizeof(Vertex), splineComp->vertices.data(), GL_STATIC_DRAW);
+
+        // Link attributes
+        splineComp->spline->vao->LinkAttrib(*splineComp->spline->vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, x)); // Position
+        splineComp->spline->vao->LinkAttrib(*splineComp->spline->vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, r)); // Color
+        splineComp->spline->vao->LinkAttrib(*splineComp->spline->vbo, 2, 2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, u)); // TexCoords
+        splineComp->spline->vao->LinkAttrib(*splineComp->spline->vbo, 3, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, normalx)); // Normals
+
+        // Bind and upload indices
+        splineComp->spline->ebo->Bind();
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, splineComp->indices.size() * sizeof(unsigned int), splineComp->indices.data(), GL_STATIC_DRAW);
+
+        // Unbind VAO/VBO/EBO for safety
+        splineComp->spline->vao->Unbind();
+        splineComp->spline->vbo->Unbind();
+        splineComp->spline->ebo->Unbind();
+    }
+
 }
 
 void EntityManager::initalizeTexture(std::shared_ptr<Entity>& entity)
