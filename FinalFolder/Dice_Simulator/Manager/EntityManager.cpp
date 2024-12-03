@@ -18,7 +18,8 @@
 
 
 
-EntityManager::EntityManager(std::shared_ptr<Shader> shaderprogram) : EntityCount(0), shader(shaderprogram), rigidbody(std::make_shared<RigidBody>()), grid(std::make_shared<Grid>(1000, 1000, 50))
+EntityManager::EntityManager(std::shared_ptr<Shader> shaderprogram) : EntityCount(0), shader(shaderprogram), rigidbody(std::make_shared<RigidBody>()), 
+grid(std::make_shared<Grid>(10000, 10000, 50))
 {
 }
 

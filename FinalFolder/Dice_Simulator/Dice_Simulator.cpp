@@ -47,17 +47,11 @@ int main()
 	std::shared_ptr<EntityManager> manager = std::make_shared<EntityManager>(shaderProgram);
 	std::shared_ptr<SpawnSystem> spawnSystem = std::make_shared<SpawnSystem>(manager);
 
-    //spawnSystem->SpawnEntity(0, 0, 0, "Resources/Texture/Textures/sky.jpg", "Cube", 10000.0f);
-
 	std::shared_ptr<Entity> entity = std::make_shared<Entity>();
-	entity->AddComponent<TransformComponent>(glm::vec3(0,0,0), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(10.f));
-	entity->AddComponent<MeshComponent>("Torus", glm::vec3(0.f, 1.f, 0.f), "");
+	entity->AddComponent<TransformComponent>(glm::vec3(0,0,0), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.f));
+	entity->AddComponent<MeshComponent>("PointCloud", glm::vec3(0.f, 1.f, 0.f), "");
 	manager->AddEntity(entity);
 	glPointSize(1.0f);
-
-    //spawnSystem->SpawnEntity(20, 0, -10, "Resources/Texture/Textures/beako.png");
-    //spawnSystem->SpawnEntity(0, 0, -10, "Resources/Texture/Textures/beako.png");
-    spawnSystem->SpawnEntity(-20, 0, -10, "");
 
 
     // ---------------------------------------------------------------------- -----------------------------------------------------

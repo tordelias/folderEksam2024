@@ -60,7 +60,6 @@ void SpawnSystem::input(GLFWwindow* window, std::shared_ptr<Camera> camera)
 		bPPressed = false;
 	}
 	bool isM1Pressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-
 	if (isM1Pressed && !m1PressedLastFrame)
 	{
 		glm::vec3 position = camera->Position + ((float)10 * camera->Orientation);
@@ -99,7 +98,7 @@ void SpawnSystem::SpawnEntity(int x, int y, int z)
 
 	// Set random color for the MeshComponent
 	cube->AddComponent<MeshComponent>("Sphere", glm::vec3(r, g, b), "");
-	cube->AddComponent<SplineComponent>(cube);
+	//cube->AddComponent<SplineComponent>(cube);
 
 	// Add entity to the manager
 	manager->AddEntity(cube);

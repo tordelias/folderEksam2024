@@ -66,6 +66,7 @@ void RigidBody::applyRandomForce(std::vector<std::shared_ptr<Entity>> entities)
     }
 }
 
+// Calculate the gravity force for the entity
 void RigidBody::Update(std::vector<std::shared_ptr<Entity>> entities, std::shared_ptr<Grid> grid, float deltaTime)
 {
 	UpdateCollision(grid, deltaTime);
@@ -81,6 +82,7 @@ void RigidBody::Update(std::vector<std::shared_ptr<Entity>> entities, std::share
     }
 }
 
+// Add the indices of the ground to the grid cells
 void RigidBody::AddIndicesToCell(std::shared_ptr<Grid> grid, std::shared_ptr<Entity> ground) {
     if (auto groundMesh = ground->GetComponent<MeshComponent>()) {
         for (int i = 0; i < groundMesh->indices.size(); i += 3) {
@@ -124,7 +126,7 @@ void RigidBody::AddIndicesToCell(std::shared_ptr<Grid> grid, std::shared_ptr<Ent
 }
 
 
-
+// Update the collision detection for the rigid body
 void RigidBody::UpdateCollision(std::shared_ptr<Grid> grid, float dt)
 {
     for (int i = 0; i < grid->m_cells.size(); ++i)
@@ -180,7 +182,7 @@ void RigidBody::UpdateCollision(std::shared_ptr<Grid> grid, float dt)
     }
 }
 
-
+// Check for collision between objects
 void RigidBody::CheckCollision(std::shared_ptr<Entity>& object, std::vector<std::shared_ptr<Entity>>& objectToCheck, int startingIndex, float dt)
 {
     for (int i = startingIndex; i < objectToCheck.size(); ++i)
@@ -193,7 +195,7 @@ void RigidBody::CheckCollision(std::shared_ptr<Entity>& object, std::vector<std:
         }
     }
 }
-
+// Check for collision between two spheres
 void RigidBody::SphereCollison(std::shared_ptr<Entity>& objA, std::shared_ptr<Entity>& objB, float DeltaTime)
 {
     // Ensure both entities have TransformComponents before accessing
@@ -212,7 +214,7 @@ void RigidBody::SphereCollison(std::shared_ptr<Entity>& objA, std::shared_ptr<En
     glm::vec3 posA = transformA->position;
     glm::vec3 posB = transformB->position;
     float distance_centers = glm::length(posA - posB);
-
+	// Check if the distance between the centers of the two spheres is less than the sum of their radius
     if (distance_centers <= (transformA->scale.x + transformB->scale.x)) {
         float minimuntranslation = transformA->scale.x + transformB->scale.x - distance_centers;
         auto dirvec = glm::normalize(posA - posB);
@@ -220,7 +222,7 @@ void RigidBody::SphereCollison(std::shared_ptr<Entity>& objA, std::shared_ptr<En
         ObjectCollisionResponse(objA, objB);
     }
 }
-
+// Calculate the response to the collision
 void RigidBody::ObjectCollisionResponse(std::shared_ptr<Entity>& objA, std::shared_ptr<Entity>& objB)
 {
     auto transformA = objA->GetComponent<TransformComponent>();
@@ -243,15 +245,20 @@ void RigidBody::ObjectCollisionResponse(std::shared_ptr<Entity>& objA, std::shar
     glm::vec3 velocityA = transformA->velocity;
     glm::vec3 velocityB = transformB->velocity;
 
+	// Calculate the normal vector
     glm::vec3 normal = glm::normalize(posB - posA);
+	// Calculate the relative velocity
     glm::vec3 relativeVelocity = velocityA - velocityB;
+	// Calculate the relative velocity along the normal
     float velocityAlongNormal = glm::dot(relativeVelocity, normal);
 
-    float restitution = 0.01f;  // Coefficient of restitution
+	float restitution = 1.00f;  // 1 == Perfectly elastic collision, 0 == Perfectly inelastic collision
     float impulse = (-(1 + restitution) * velocityAlongNormal) / (1 / massA + 1 / massB);
 
+	// Apply the impulse to the objects
     glm::vec3 impulseVector = impulse * normal;
 
+	// Update the velocities
     glm::vec3 newVelocityA = velocityA + (impulseVector / massA);
     glm::vec3 newVelocityB = velocityB - (impulseVector / massB);
 
@@ -259,6 +266,7 @@ void RigidBody::ObjectCollisionResponse(std::shared_ptr<Entity>& objA, std::shar
     transformB->velocity = newVelocityB;
 }
 
+// Calculate the gravity force
 void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shared_ptr<Entity> planeEntity, std::shared_ptr<Grid> grid, float dt)
 {
     auto transform = entity->GetComponent<TransformComponent>();
@@ -355,7 +363,7 @@ void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shar
             if (transform->position.y < height + groundThreshold) {
                 // Stopping downward motion and applying corrective force if sinking
                 if (currentVelocity.y < 0) {
-                    currentVelocity.y = 0.0f; // Stop downward motion
+                    currentVelocity.y = 0.0f;
                 }
 
                 transform->velocity = currentVelocity;
@@ -369,40 +377,36 @@ void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shar
                 if (glm::length(normal) < epsilon) continue; // Degenerate triangle check
 
 
-                float inclineAngle = std::acos(normal.y);
                 glm::vec3 slopeVector = glm::normalize(glm::vec3(normal.x, 0.0f, normal.z)); // Slope direction
 
-                // Calculating the weighted friction coefficient using barycentric coordinates (u, v, w)
+				// Calculate the average friction coefficient of the triangle
                 float friction0 = planeVertices[index0].friction;
                 float friction1 = planeVertices[index1].friction;
                 float friction2 = planeVertices[index2].friction;
                 float frictionCoefficient = (friction0 + friction1 + friction2) / 3;
 
-                // Calculate gravity effect along the slope (along the normal direction)
-                glm::vec3 gravityAlongSlope = CalculateGravity(inclineAngle, slopeVector, normal, frictionCoefficient);
+				//calculates the acceleration due to gravity along the slope
+                glm::vec3 gravityAlongSlope = CalculateGravity(0.f, slopeVector, normal, frictionCoefficient);
 
                 // Apply both gravity and friction if there is velocity
                 if (glm::length(currentVelocity) > 0.0f) {
-                    // Direction of velocity (normalized)
                     glm::vec3 velocityDirection = glm::normalize(currentVelocity);
 
                     // Calculate friction force: opposite direction to velocity
                     glm::vec3 frictionForce = -frictionCoefficient * glm::length(normal) * velocityDirection;
 
                     // Cap the friction force to not exceed the current velocity's magnitude
-                    if (glm::length(frictionForce) > glm::length(currentVelocity)) {
-                        frictionForce = -currentVelocity; // Fully opposes motion, stopping the object
+                    if (glm::length(frictionForce) > glm::length(currentVelocity)) 
+                    {
+                        frictionForce = -currentVelocity; 
                     }
-
                     // Update velocity considering both gravity and friction
                     glm::vec3 newVelocity = currentVelocity + gravityAlongSlope + frictionForce;
 
                     // Stop the object if its velocity becomes very small
                     if (glm::length(newVelocity) < 0.001f) {
-                        newVelocity = glm::vec3(0.0f); // Stop the object if velocity is very small
+                        newVelocity = glm::vec3(0.0f);
                     }
-
-                    // Update the velocity of the transform
                     transform->velocity = newVelocity;
                 }
                 else {
@@ -410,7 +414,7 @@ void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shar
                     transform->velocity += gravityAlongSlope * dt;
                 }
 
-                return; // Early return to stop further gravity calculations
+                return;
             }
 
             // If the object isn't on the ground, apply gravity normally
@@ -432,9 +436,12 @@ glm::vec3 RigidBody::CalculateGravity(float inclineAngle, glm::vec3 slopeVector,
 {
     slopeVector = glm::normalize(slopeVector);
     glm::vec3 gravityForce(0.0f, -gravity, 0.0f);
+	//project the forces on the normal and slope vectors
     float normalForceMagnitude = glm::dot(gravityForce, normal); 
     glm::vec3 normalForce = normal * normalForceMagnitude;
+    //Gx = G - N 
     glm::vec3 gravityParallel = gravityForce - normalForce;
+	//project the forces on the slope vector
     glm::vec3 gravityAlongSlope = glm::dot(gravityParallel, slopeVector) * slopeVector;
 
 

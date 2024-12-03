@@ -249,16 +249,14 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
             Vertex vertex;
 
             // Position (X and Z are used for the grid, Y is the height)
-            vertex.x = (x - halfWidth) * spacing;  // Shift the x position to center
-            vertex.z = (z - halfDepth) * spacing;  // Shift the z position to center
-            vertex.y = std::sin(x * 0.5f) * std::cos(z * 0.5f) * 2.0f;  // Height variation using sine and cosine
-
+            vertex.x = (x - halfWidth) * spacing; 
+            vertex.z = (z - halfDepth) * spacing;  
+            vertex.y = std::sin(x * 0.5f) * std::cos(z * 0.5f) * 2.0f; 
             // Color
             vertex.r = color.r;
             vertex.g = color.g;
             vertex.b = color.b;
 
-            // Texture coordinates (simple mapping)
             vertex.u = (float)x / (width - 1);
             vertex.v = (float)z / (depth - 1);
 
@@ -267,13 +265,12 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
             vertex.normaly = 1.0f;
             vertex.normalz = 0.0f;
 
-            // Index (for use in rendering)
             vertex.index = vertices.size();
 
-            // Friction (random value, for example)
+			//set friction and color
 			if (count % 6 == 0)
             {
-                vertex.friction = 1.0f;
+                vertex.friction = 0.7f;
                 vertex.r = 1.f;
 				vertex.g = 0.f;
 				vertex.b = 0.f;
@@ -306,8 +303,6 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
             indices.push_back(bottomRight);
         }
     }
-
-    // Return the vertices and indices as a pair
     return { vertices, indices };
 }
 
@@ -320,7 +315,7 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
     std::vector<Point_2> points;
     points.reserve(vertices.size());
 
-    // Display progress for the vertex loop
+	// Create a map from 2D points to vertex indices
     size_t step = std::max<size_t>(1, vertices.size() / 100);
     for (unsigned int i = 0; i < vertices.size(); ++i) {
         Point_2 pt(vertices[i].x, vertices[i].z); // Using x and z as 2D coordinates
@@ -332,7 +327,7 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
             showLoadingBar(i + 1, vertices.size(), "Processing Vertices");
         }
     }
-    std::cout << std::endl; // Finish the line after the loading bar
+    std::cout << std::endl; 
 
     // Perform Delaunay triangulation
     Delaunay delaunay;
@@ -345,6 +340,7 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
         std::vector<unsigned int> localIndices;
 
 #pragma omp for nowait
+		// fetch the indices and calculate the normals
         for (auto face = delaunay.finite_faces_begin(); face != delaunay.finite_faces_end(); ++face) {
             unsigned int i0 = point_to_index[face->vertex(0)->point()];
             unsigned int i1 = point_to_index[face->vertex(1)->point()];
@@ -395,61 +391,25 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::PointCloud(glm::
         vertices[i].normaly = normal.y;
         vertices[i].normalz = normal.z;
 
-        // Update the loading bar
         if (i % step == 0 || i == static_cast<int>(totalVertices - 1)) {
             showLoadingBar(i + 1, totalVertices, "Normalizing Vertices");
         }
     }
-    std::cout << std::endl; // Finish the line after the loading bar
+    std::cout << std::endl; 
 
     flipEdgeIfNecessary(vertices, delaunay, point_to_index);
+
     return std::make_pair(std::move(vertices), std::move(indices));
 }
 
 
-// flipEdgeIfNecessary(vertices, delaunay, point_to_index);
-
-void Mesh::laplacianSmoothing(std::vector<Vertex>& vertices, std::vector<std::vector<unsigned int>>& vertexNeighbors, float lambda, int iterations) {
-    for (int iter = 0; iter < iterations; ++iter) {
-        std::vector<glm::vec3> newPositions(vertices.size(), glm::vec3(0.0f));
-
-        // Parallelize Laplacian smoothing
-#pragma omp parallel for
-        for (unsigned int i = 0; i < vertices.size(); ++i) {
-            glm::vec3 smoothedPosition(0.0f);
-            unsigned int num_neighbors = vertexNeighbors[i].size();
-
-            for (unsigned int neighbor : vertexNeighbors[i]) {
-                smoothedPosition += glm::vec3(vertices[neighbor].x, vertices[neighbor].y, vertices[neighbor].z);
-            }
-
-            if (num_neighbors > 0) smoothedPosition /= num_neighbors;
-            glm::vec3 originalPosition(vertices[i].x, vertices[i].y, vertices[i].z);
-            newPositions[i] = originalPosition + lambda * (smoothedPosition - originalPosition);
-        }
-
-        // Update vertex positions
-        for (unsigned int i = 0; i < vertices.size(); ++i) {
-            vertices[i].x = newPositions[i].x;
-            vertices[i].y = newPositions[i].y;
-            vertices[i].z = newPositions[i].z;
-        }
-    }
-}
-
 
 std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::BSplineSurface(glm::vec3 color) {
-    std::vector<Vertex> vertices = Readfile("Data/32-2-516-156-31.txt", color);
-    std::vector<unsigned int> indices;
-
     // Control points for the surface (example control grid)
     std::vector<glm::vec3> mc; // = Readfile("Data/32-2-516-156-31.txt", color);
 
-    int pointcloudSize = 2531030; 
-    pointcloudSize /= 1000; 
-
-   const int numU =sqrt(pointcloudSize);
-   const int numV = sqrt(pointcloudSize);
+    const int numU = 4;
+    const int numV = 3;
    const int degree = 2;
 
 
@@ -463,10 +423,10 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::BSplineSurface(g
             uKnots.push_back(0.0f);
         }
         else if (i >= numU) {
-            uKnots.push_back(numU - degree);  // Normalize the end knot to 1
+            uKnots.push_back(numU - degree);  
         }
         else {
-            uKnots.push_back((float)(i - degree));  // Interior knots
+            uKnots.push_back(i - degree);
         }
     }
 
@@ -476,17 +436,12 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::BSplineSurface(g
             vKnots.push_back(0.0f);
         }
         else if (i >= numV) {
-            vKnots.push_back(numV - degree);  // Normalize the end knot to 1
+            vKnots.push_back(numV - degree); 
         }
         else {
-            vKnots.push_back(i-degree);  // Interior knots
+            vKnots.push_back(i-degree); 
         }
     }
-
-	for (auto v : vertices)
-	{
-		mc.push_back(glm::vec3(v.x, v.y, v.z));
-	}
 
 	std::cout << "uKnots: ";
 	for (auto u : uKnots)
@@ -500,8 +455,23 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::BSplineSurface(g
 		std::cout << v << " ";
 	}
 	std::cout << std::endl;
+	// Control points for the surface
+    mc.push_back(glm::vec3(0, 0, 0));
+    mc.push_back(glm::vec3(1, 0, 0));
+    mc.push_back(glm::vec3(2, 0, 0));
+    mc.push_back(glm::vec3(3, 0, 0));
 
+    mc.push_back(glm::vec3(0, 0, 1));
+    mc.push_back(glm::vec3(1, 2, 1));
+    mc.push_back(glm::vec3(2, 2, 1));
+    mc.push_back(glm::vec3(3, 0, 1));
 
+    mc.push_back(glm::vec3(0, 0, 2));
+    mc.push_back(glm::vec3(1, 0, 2));
+    mc.push_back(glm::vec3(2, 0, 2));
+    mc.push_back(glm::vec3(3, 0, 2));
+
+    //controll Grid
     std::vector<std::vector<glm::vec3>> c(numU, std::vector<glm::vec3>(numV));
 	for (int i = 0; i < numU; i++)
 	{
@@ -578,9 +548,6 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::Spline(glm::vec3
         m_indices.push_back(i + 1);
     }
 
-    //std::cout << "m_vertices size: " << m_vertices.size() << std::endl;
-    //std::cout << "m_indices size: " << m_indices.size() << std::endl;
-
     return { m_vertices, m_indices };
 }
 
@@ -599,14 +566,6 @@ void Mesh::MakeBiquadraticSurface(const int n_u, const int n_v, int d_u, int d_v
             float u = j * h;
             float v = i * h;
 
-            // Find the corresponding knot intervals for u and v
-            //int my_u = FindKnotInterval(mu, d_u, n_u, u);
-            //int my_v = FindKnotInterval(mv, d_v, n_v, v);
-
-            // Calculate the basis function coefficients for the current u and v
-            //auto koeff_par = B2(u, v, my_u, my_v);
-
-            // Evaluate the biquadratic surface at the current u and v
             glm::vec3 surfacePoint = deBoorSurface(d_u, d_v, mu, mv, mc, u, v, n_u, n_v);
 
             Vertex vertex;
@@ -679,10 +638,10 @@ void Mesh::MakeBiquadraticSurface(const int n_u, const int n_v, int d_u, int d_v
 
 glm::vec3 Mesh::deBoorSurface(int d_u, int d_v, std::vector<float> mu, std::vector<float> mv, std::vector<glm::vec3> ControlsPoints, float u, float v, const int KnotsUsize, const int KnotsVsize)
 {
-    // Step 1: Apply de Boor along the u-direction
+    //  Apply de Boor along the u-direction
     std::vector<glm::vec3> tempPoints;
     for (int i = 0; i < KnotsVsize; ++i) {
-        // Extract the i-th row of control points (nu points per row)
+        // Extract row of control points 
         std::vector<glm::vec3> row;
         for (int j = 0; j < KnotsUsize; ++j) {
             row.push_back(ControlsPoints[i * KnotsUsize + j]);
@@ -690,12 +649,10 @@ glm::vec3 Mesh::deBoorSurface(int d_u, int d_v, std::vector<float> mu, std::vect
 
         // Apply de Boor along the u-direction for this row
         glm::vec3 t = deBoor(d_u, d_u, mu, row, u);
-        tempPoints.push_back(t); // Store the result for v-direction interpolation
+        tempPoints.push_back(t); 
     }
-
-    // Now apply de Boor along the v-direction on the result from the u-direction
     glm::vec3 f = deBoor(d_v, d_v, mv, tempPoints, v);
-    return f; // Interpolate along v with the new points
+    return f; 
 }
 
 
@@ -746,11 +703,6 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
         std::string line;
         Vertex point;
 
-        //point.r = color.x;
-        //point.g = color.y;
-        //point.b = color.z;
-
-
         if (std::getline(inputFile, line))
                 totalLines = std::stoi(line);
 
@@ -759,17 +711,17 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
 
         while (std::getline(inputFile, line)) {
             if (sscanf_s(line.c_str(), "%f %f %f", &point.x, &point.z, &point.y) == 3) {
-                point.u = (point.x - min_x) / (max_x - min_x);  // Normalize x coordinate
-                point.v = (point.z - min_z) / (max_z - min_z);  // Normalize z coordinate
+                point.u = (point.x - min_x) / (max_x - min_x); 
+                point.v = (point.z - min_z) / (max_z - min_z);
 
-                if (processedLines < 50) {  // Apply red to the first 50 points only
+                if (processedLines < 50) {  
                     point.friction = 0.5f;
-                    point.r = 1.0f;  // Red
+                    point.r = 1.0f;  
                     point.g = 0.0f;
                     point.b = 0.0f;
                 }
                 else {
-                    point.r = color.x;  // Use custom color for the rest
+                    point.r = color.x;  
                     point.g = color.y;
                     point.b = color.z;
                     point.friction = 0.0f;
@@ -780,8 +732,6 @@ std::vector<Vertex> Mesh::Readfile(const char* fileName, glm::vec3 color) {
 
             numPointsIncreacedFriction++;
             processedLines++;
-
-            // Reset numPointsIncreacedFriction less frequently, if necessary
             if (numPointsIncreacedFriction >= 1000000) {
                 numPointsIncreacedFriction = 0;
             }
