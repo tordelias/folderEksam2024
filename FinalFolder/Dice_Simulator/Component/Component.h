@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include "Mesh.h"
+#include "../System/ParticleSystem.h"
 
 class Component
 {
@@ -42,4 +43,22 @@ public:
     glm::vec3 startpos; 
 	SplineComponent(std::shared_ptr<Entity> ownerptr);
     void CalculateBSpline();
+};
+
+struct ParticleComponent : public Component
+{
+public:
+	glm::vec3 position;
+	glm::vec3 velocity;
+	glm::vec3 acceleration;
+	glm::vec3 Size;
+	ParticleComponent(const glm::vec3& pos = glm::vec3(0.0f),
+		const glm::vec3& vel = glm::vec3(0.f),
+		const glm::vec3& acc = glm::vec3(0.f, 9.81f, 0.f),
+		const glm::vec3& size = glm::vec3(1.f))
+		: position(pos), velocity(vel), acceleration(acc), Size(size)
+	{
+		particleSystem = std::make_shared<ParticleSystem>(position, acceleration, Size, 500);
+	}
+	std::shared_ptr<ParticleSystem> particleSystem;
 };

@@ -87,7 +87,6 @@ void SpawnSystem::SpawnEntity(int x, int y, int z)
 	static std::mt19937 gen(rd());
 	static std::uniform_real_distribution<> dis(0.0, 1.0);
 
-	// Generate random color values
 	float r = dis(gen);
 	float g = dis(gen);
 	float b = dis(gen);
@@ -97,7 +96,8 @@ void SpawnSystem::SpawnEntity(int x, int y, int z)
 	cube->AddComponent<TransformComponent>(glm::vec3(x, y, z), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f));
 
 	// Set random color for the MeshComponent
-	cube->AddComponent<MeshComponent>("Sphere", glm::vec3(r, g, b), "");
+	cube->AddComponent<MeshComponent>("Cube", glm::vec3(r, g, b), "");
+	cube->AddComponent<ParticleComponent>(glm::vec3(x,y,z), glm::vec3(0, 0, 0), glm::vec3(0, -3.f, 0), glm::vec3(1, 1, 1));
 	//cube->AddComponent<SplineComponent>(cube);
 
 	// Add entity to the manager

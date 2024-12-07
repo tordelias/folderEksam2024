@@ -88,6 +88,12 @@ void EntityManager::Render(glm::mat4 viewproj, float dt) {
         entity->vao->Unbind();
         entity->vbo->Unbind();
         entity->ebo->Unbind();
+
+		if (entity->HasComponent<ParticleComponent>())
+		{
+			auto particleComponent = entity->GetComponent<ParticleComponent>();
+			particleComponent->particleSystem->update(viewproj, shader,transform->position, dt);
+		}
     }
 
     // Render splines and reset state

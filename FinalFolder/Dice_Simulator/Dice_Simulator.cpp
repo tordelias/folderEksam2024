@@ -48,8 +48,8 @@ int main()
 	std::shared_ptr<SpawnSystem> spawnSystem = std::make_shared<SpawnSystem>(manager);
 
 	std::shared_ptr<Entity> entity = std::make_shared<Entity>();
-	entity->AddComponent<TransformComponent>(glm::vec3(0,0,0), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.f));
-	entity->AddComponent<MeshComponent>("PointCloud", glm::vec3(0.f, 1.f, 0.f), "");
+	entity->AddComponent<TransformComponent>(glm::vec3(0,0,-5), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(10.f));
+	entity->AddComponent<MeshComponent>("Torus", glm::vec3(0.f, 1.f, 0.f), "");
 	manager->AddEntity(entity);
 	glPointSize(1.0f);
 

@@ -175,6 +175,7 @@ copy "$(ProjectDir)Dependency\includes\assimp\lib\assimp-vc143-mt.dll" "$(OutDir
     <ClCompile Include="Component\Mesh.cpp" />
     <ClCompile Include="Manager\EntityManager.cpp" />
     <ClCompile Include="Model.cpp" />
+    <ClCompile Include="System\ParticleSystem.cpp" />
     <ClCompile Include="Resources\Camera\Camera.cpp" />
     <ClCompile Include="Resources\Shaders\EBO.cpp" />
     <ClCompile Include="Resources\Shaders\shaderClass.cpp" />
@@ -193,6 +194,7 @@ copy "$(ProjectDir)Dependency\includes\assimp\lib\assimp-vc143-mt.dll" "$(OutDir
     <ClInclude Include="Component\Mesh.h" />
     <ClInclude Include="Manager\EntityManager.h" />
     <ClInclude Include="Model.h" />
+    <ClInclude Include="System\ParticleSystem.h" />
     <ClInclude Include="Resources\Camera\Camera.h" />
     <ClInclude Include="Resources\Shaders\EBO.h" />
     <ClInclude Include="Resources\Shaders\shaderClass.h" />

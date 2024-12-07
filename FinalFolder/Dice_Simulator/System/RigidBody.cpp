@@ -44,7 +44,7 @@ void RigidBody::applyAngularForce(glm::vec3 force, glm::vec3 pointOfImpact, std:
 
 void RigidBody::applyGravity(std::shared_ptr<Entity> entity, float deltaTime)
 {
-    applyForce(glm::vec3(0, -mass * gravity, 0), entity);
+    applyForce(glm::vec3(0, -mass * gravity * deltaTime, 0), entity);
 }
 
 void RigidBody::applyRandomForce(std::vector<std::shared_ptr<Entity>> entities)
