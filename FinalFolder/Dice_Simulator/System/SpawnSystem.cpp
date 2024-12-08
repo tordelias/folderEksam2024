@@ -97,7 +97,7 @@ void SpawnSystem::SpawnEntity(int x, int y, int z)
 
 	// Set random color for the MeshComponent
 	cube->AddComponent<MeshComponent>("Cube", glm::vec3(r, g, b), "");
-	cube->AddComponent<ParticleComponent>(glm::vec3(x,y,z), glm::vec3(0, 0, 0), glm::vec3(0, -3.f, 0), glm::vec3(1, 1, 1));
+	cube->AddComponent<ParticleComponent>(glm::vec3(x,y,z), glm::vec3(0, 0, 0), glm::vec3(0, -1.f, 0), glm::vec3(1, 1, 1));
 	//cube->AddComponent<SplineComponent>(cube);
 
 	// Add entity to the manager

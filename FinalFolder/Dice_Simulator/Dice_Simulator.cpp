@@ -13,6 +13,7 @@
 #include "Entity.h" 
 #include "Component/Component.h"
 #include "System/SpawnSystem.h"
+#include "System/ParticleSystem.h"
 
 void processInput(Window window);
 
@@ -46,10 +47,13 @@ int main()
     // ---------------------------------------------------------------------------------------------------------------------------
 	std::shared_ptr<EntityManager> manager = std::make_shared<EntityManager>(shaderProgram);
 	std::shared_ptr<SpawnSystem> spawnSystem = std::make_shared<SpawnSystem>(manager);
+	std::shared_ptr<ParticleSystem> particlesystem = std::make_shared<ParticleSystem>(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(50.f, 2.5f, 50.f), 5000);
+	// ---------------------------------------------------------------------------------------------------------------------------
 
 	std::shared_ptr<Entity> entity = std::make_shared<Entity>();
 	entity->AddComponent<TransformComponent>(glm::vec3(0,0,-5), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(10.f));
 	entity->AddComponent<MeshComponent>("Torus", glm::vec3(0.f, 1.f, 0.f), "");
+	entity->AddComponent<LuaComponent>(particlesystem, "Component.lua");    
 	manager->AddEntity(entity);
 	glPointSize(1.0f);
 
@@ -72,7 +76,8 @@ int main()
         deltaTime = static_cast<float>(currentTime - lastTime); // Calculate deltaTime
         lastTime = currentTime;
 
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+       // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0,0,0, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
@@ -83,6 +88,7 @@ int main()
        
 		spawnSystem->input(window.GetWindow(), camera);
 		manager->Render(viewproj, deltaTime);
+		entity->GetComponent<LuaComponent>()->CheckAndReloadLuaFile();
 
 
 

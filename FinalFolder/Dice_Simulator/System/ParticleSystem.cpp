@@ -11,10 +11,10 @@
 
 
 
-ParticleSystem::ParticleSystem(glm::vec3 pos, glm::vec3 acc,glm::vec3 scale, int maxparticles) : pos(pos), acc(acc), maxParticles(maxparticles)//, scale(scale)
+ParticleSystem::ParticleSystem(glm::vec3 pos, glm::vec3 acc,glm::vec3 scale, int maxparticles) : pos(pos), acc(acc), maxParticles(maxparticles), scale(scale)
 {
 	Mesh mesh;
-    auto [cubeVertices, cubeIndices] = mesh.CubeMesh(color);
+    auto [cubeVertices, cubeIndices] = mesh.SphereMesh(color);
     vertices = cubeVertices;
     indices = cubeIndices;
 	for (int i = 0; i < maxParticles; ++i)
@@ -34,13 +34,13 @@ void ParticleSystem::emit()
 	static std::uniform_real_distribution<> disX(-scale.x, scale.x);
 	static std::uniform_real_distribution<> disY(-scale.y, scale.y);
 	static std::uniform_real_distribution<> disZ(-scale.z, scale.z);
-	static std::uniform_real_distribution<> dis(0, 2);
+	static std::uniform_real_distribution<> dis(minLife, maxLife);
 
 	std::shared_ptr<VAO> vao = std::make_shared<VAO>();
 	std::shared_ptr<VBO> vbo = std::make_shared<VBO>();
 	std::shared_ptr<EBO> ebo = std::make_shared<EBO>();
 
-	position.push_back(pos + glm::vec3(disX(gen), disY(gen), disZ(gen))); 
+	position.push_back(pos + glm::vec3(0,scale.y * 12.f,0) + glm::vec3(disX(gen), disY(gen), disZ(gen)));
 	velocity.push_back(glm::vec3(0, 0, 0));
 	acceleration.push_back(acc * glm::vec3(0, dis(gen), 0));
 	lifetime.push_back(dis(gen));
@@ -112,10 +112,18 @@ void ParticleSystem::reset(glm::vec3& Ppos, glm::vec3& Pvel, float& life)
 	static std::uniform_real_distribution<> disX(-scale.x, scale.x);
 	static std::uniform_real_distribution<> disY(-scale.y, scale.y);
 	static std::uniform_real_distribution<> disZ(-scale.z, scale.z);
-	static std::uniform_real_distribution<> dis(0, 2);
+	static std::uniform_real_distribution<> dis(minLife, maxLife);
 
-	Ppos = pos + glm::vec3(disX(gen), disY(gen), disZ(gen));
+	Ppos = pos + glm::vec3(0,scale.y * 10.f,0) + glm::vec3(disX(gen), disY(gen), disZ(gen));
 	Pvel = glm::vec3(0, 0, 0);
 	 life = dis(gen);
+}
+
+void ParticleSystem::updateacceleration(glm::vec3 acc)
+{
+	for (int i = 0; i < maxParticles; i++)
+	{
+		acceleration[i] = acc;
+	}
 }
 

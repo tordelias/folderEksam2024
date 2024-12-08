@@ -17,6 +17,7 @@ public:
 	void update(glm::mat4 viewproj, std::shared_ptr<Shader> shader, glm::vec3 Opos, float dt);
 	void draw(glm::mat4 viewproj, std::shared_ptr<Shader> shader);
 	void reset(glm::vec3& Ppos, glm::vec3& Pvel, float& life);
+	void updateacceleration(glm::vec3 acc);
 private: 
 	std::vector<glm::vec3> position;
 	std::vector<glm::vec3> velocity;
@@ -31,8 +32,10 @@ private:
 	int maxParticles = 500;
 	std::vector<unsigned int> indices;
 	std::vector<Vertex> vertices;
-	glm::vec3 color = glm::vec3(0, 0, 1);
-	glm::vec3 scale = glm::vec3(0.20);
-	glm::vec3 size = glm::vec3(0.01f);
+	glm::vec3 color = glm::vec3(1, 1, 1);
+	glm::vec3 scale = glm::vec3(1.f);
+	glm::vec3 size = glm::vec3(0.03f);
+	int maxLife = 8;
+	int minLife = 2;
 };
 
