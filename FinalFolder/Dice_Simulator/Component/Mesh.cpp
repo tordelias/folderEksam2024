@@ -253,31 +253,31 @@ std::pair<std::vector<Vertex>, std::vector<unsigned int>> Mesh::TorusMesh(glm::v
             vertex.z = (z - halfDepth) * spacing;  
             vertex.y = std::sin(x * 0.5f) * std::cos(z * 0.5f) * 2.0f; 
             // Color
-            vertex.r = color.r;
-            vertex.g = color.g;
-            vertex.b = color.b;
+            vertex.r = 1.f;
+            vertex.g = 1.f;
+            vertex.b = 1.f;
 
             vertex.u = (float)x / (width - 1);
             vertex.v = (float)z / (depth - 1);
 
             // Normals (simplified, pointing upwards)
-            vertex.normalx = 0.0f;
-            vertex.normaly = 1.0f;
-            vertex.normalz = 0.0f;
+            //vertex.normalx = 0.0f;
+            //vertex.normaly = 1.0f;
+            //vertex.normalz = 0.0f;
 
             vertex.index = vertices.size();
 
 			//set friction and color
-			if (count % 6 == 0)
-            {
-                vertex.friction = 0.7f;
-                vertex.r = 1.f;
-				vertex.g = 0.f;
-				vertex.b = 0.f;
-            }
-			else
+			//if (count % 6 == 0)
+   //         {
+   //             vertex.friction = 0.7f;
+   // //            vertex.r = 1.f;
+			//	//vertex.g = 0.f;
+			//	//vertex.b = 0.f;
+   //         }
+			//else
                 vertex.friction = 0.f;
-			count++;
+			//count++;
             // Add vertex to the list
             vertices.push_back(vertex);
         }

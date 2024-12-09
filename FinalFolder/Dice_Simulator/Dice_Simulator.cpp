@@ -47,16 +47,27 @@ int main()
     // ---------------------------------------------------------------------------------------------------------------------------
 	std::shared_ptr<EntityManager> manager = std::make_shared<EntityManager>(shaderProgram);
 	std::shared_ptr<SpawnSystem> spawnSystem = std::make_shared<SpawnSystem>(manager);
-	std::shared_ptr<ParticleSystem> particlesystem = std::make_shared<ParticleSystem>(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(50.f, 2.5f, 50.f), 5000);
+	std::shared_ptr<ParticleSystem> particlesystemSnow = std::make_shared<ParticleSystem>(glm::vec3(0, 0, 0), glm::vec3(0, -0.5f, 1), glm::vec3(50.f, 2.5f, 50.f), glm::vec3(0.04f), glm::ivec2(2,8),glm::vec3(1,1,1), 5000, 0);
+    std::shared_ptr<ParticleSystem> particlesystemSmoke = std::make_shared<ParticleSystem>(glm::vec3(0, 5, -5), glm::vec3(0, 0.5f, 0), glm::vec3(0.20f, 0.f, 0.20f), glm::vec3(0.1f), glm::ivec2(0, 2), glm::vec3(0.5, 0.5, 0.5), 50, 1);
 	// ---------------------------------------------------------------------------------------------------------------------------
-
+  
 	std::shared_ptr<Entity> entity = std::make_shared<Entity>();
-	entity->AddComponent<TransformComponent>(glm::vec3(0,0,-5), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(10.f));
-	entity->AddComponent<MeshComponent>("Torus", glm::vec3(0.f, 1.f, 0.f), "");
-	entity->AddComponent<LuaComponent>(particlesystem, "Component.lua");    
+	entity->AddComponent<TransformComponent>(glm::vec3(0,0,0), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(10.f));
+	entity->AddComponent<MeshComponent>("Torus", glm::vec3(1.f, 1.f, 1.f), "Resources/Texture/Textures/snow.jpg");
+	entity->AddComponent<LuaComponent>(particlesystemSnow, "Component.lua");
 	manager->AddEntity(entity);
-	glPointSize(1.0f);
 
+    std::shared_ptr<Entity> entity1 = std::make_shared<Entity>();
+	entity1->AddComponent<TransformComponent>(glm::vec3(0, 5, -5), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.f));
+	entity1->AddComponent<MeshComponent>("Sphere", glm::vec3(1.f, 0.f, 1.f), "");
+	entity1->AddComponent<LuaComponent>(particlesystemSmoke, "Component.lua");
+	manager->AddEntity(entity1);
+
+    std::shared_ptr<Entity> entity2 = std::make_shared<Entity>();
+    entity2->AddComponent<TransformComponent>(glm::vec3(0, 5, 5), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.f));
+    entity2->AddComponent<MeshComponent>("Sphere", glm::vec3(1.f, 0.f, 1.f), "");
+    entity2->AddComponent<LuaComponent>(particlesystemSmoke, "Component.lua");
+    manager->AddEntity(entity2);
 
     // ---------------------------------------------------------------------- -----------------------------------------------------
     //                                                        other
@@ -89,6 +100,8 @@ int main()
 		spawnSystem->input(window.GetWindow(), camera);
 		manager->Render(viewproj, deltaTime);
 		entity->GetComponent<LuaComponent>()->CheckAndReloadLuaFile();
+		//entity1->GetComponent<LuaComponent>()->CheckAndReloadLuaFile();
+        //entity2->GetComponent<LuaComponent>()->CheckAndReloadLuaFile();
 
 
 

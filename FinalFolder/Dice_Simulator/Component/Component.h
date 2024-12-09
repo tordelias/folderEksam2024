@@ -59,7 +59,7 @@ public:
 		const glm::vec3& size = glm::vec3(1.f))
 		: position(pos), velocity(vel), acceleration(acc), Size(size)
 	{
-		particleSystem = std::make_shared<ParticleSystem>(position, acceleration, Size, 100);
+		particleSystem = std::make_shared<ParticleSystem>(position, acceleration, Size, glm::vec3(0.1f), glm::ivec2(0, 2), glm::vec3(0.5, 0.5, 0.5), 50, 1);
 	}
 	std::shared_ptr<ParticleSystem> particleSystem;
 };

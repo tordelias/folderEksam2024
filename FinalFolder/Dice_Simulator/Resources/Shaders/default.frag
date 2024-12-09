@@ -46,7 +46,7 @@ void main() {
     vec3 baseColor = useTexture ? texture(ourTexture, TexCoords).rgb : color;
 
     // Final color (apply lighting and base color)
-    vec3 finalColor = (lighting * baseColor) * 0.5 + 0.2 * Normal;
+    vec3 finalColor = (lighting * baseColor);
 
     // Output the final color without gamma correction
     FragColor = vec4(finalColor, 1.0);

@@ -44,7 +44,7 @@ void RigidBody::applyAngularForce(glm::vec3 force, glm::vec3 pointOfImpact, std:
 
 void RigidBody::applyGravity(std::shared_ptr<Entity> entity, float deltaTime)
 {
-    applyForce(glm::vec3(0, -mass * gravity * deltaTime, 0), entity);
+    applyForce(glm::vec3(0, -mass * gravity, 0), entity);
 }
 
 void RigidBody::applyRandomForce(std::vector<std::shared_ptr<Entity>> entities)
@@ -363,7 +363,7 @@ void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shar
             if (transform->position.y < height + groundThreshold) {
                 // Stopping downward motion and applying corrective force if sinking
                 if (currentVelocity.y < 0) {
-                    currentVelocity.y = 0.0f;
+                    transform->velocity.y *= -0.1f;
                 }
 
                 transform->velocity = currentVelocity;
@@ -371,6 +371,7 @@ void RigidBody::BarycentricCoordinates(std::shared_ptr<Entity> entity, std::shar
                 // Correcting position if sinking into the ground
                 if (transform->position.y < height + groundThreshold) {
                     transform->position.y = height + groundThreshold;
+					currentVelocity.y = 0.0f;
                 }
 
                 glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));

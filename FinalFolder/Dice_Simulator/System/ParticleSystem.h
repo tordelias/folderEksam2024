@@ -11,7 +11,7 @@ class ParticleSystem
 {
 public:
 
-	ParticleSystem(glm::vec3 pos, glm::vec3 acc,glm::vec3 scale, int maxparticles);
+	ParticleSystem(glm::vec3 pos, glm::vec3 acc,glm::vec3 radius, glm::vec3 particleSize, glm::ivec2 life, glm::vec3 Color, int maxparticles, int figure);
 	~ParticleSystem();
 	void emit();
 	void update(glm::mat4 viewproj, std::shared_ptr<Shader> shader, glm::vec3 Opos, float dt);
@@ -34,8 +34,8 @@ private:
 	std::vector<Vertex> vertices;
 	glm::vec3 color = glm::vec3(1, 1, 1);
 	glm::vec3 scale = glm::vec3(1.f);
-	glm::vec3 size = glm::vec3(0.03f);
-	int maxLife = 8;
-	int minLife = 2;
+	glm::vec3 size = glm::vec3(0.01f);
+	int maxLife = 2;
+	int minLife = 0;
 };
 

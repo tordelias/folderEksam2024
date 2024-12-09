@@ -11,12 +11,29 @@
 
 
 
-ParticleSystem::ParticleSystem(glm::vec3 pos, glm::vec3 acc,glm::vec3 scale, int maxparticles) : pos(pos), acc(acc), maxParticles(maxparticles), scale(scale)
+ParticleSystem::ParticleSystem(glm::vec3 pos, glm::vec3 acc, glm::vec3 radius, glm::vec3 particleSize,glm::ivec2 life, glm::vec3 Color, int maxparticles, int figure = 0) : pos(pos), acc(acc), maxParticles(maxparticles), scale(radius), size(particleSize), color(Color)
 {
 	Mesh mesh;
-    auto [cubeVertices, cubeIndices] = mesh.SphereMesh(color);
-    vertices = cubeVertices;
-    indices = cubeIndices;
+	if (life.x < life.y) {
+		minLife = life.x;
+		maxLife = life.y;
+	}
+	else
+	{
+		std::cerr << "Error: minLife is greater than maxLife" << std::endl;
+	}
+	if(figure == 0)
+	{
+		auto [cubeVertices, cubeIndices] = mesh.SphereMesh(color);
+		vertices = cubeVertices;
+		indices = cubeIndices;
+	}
+	else
+	{
+		auto [cubeVertices, cubeIndices] = mesh.CubeMesh(color);
+		vertices = cubeVertices;
+		indices = cubeIndices;
+	}
 	for (int i = 0; i < maxParticles; ++i)
 	{
 		emit();
@@ -29,12 +46,12 @@ ParticleSystem::~ParticleSystem()
 
 void ParticleSystem::emit()
 {
-	static std::random_device rd;
-	static std::mt19937 gen(rd());
-	static std::uniform_real_distribution<> disX(-scale.x, scale.x);
-	static std::uniform_real_distribution<> disY(-scale.y, scale.y);
-	static std::uniform_real_distribution<> disZ(-scale.z, scale.z);
-	static std::uniform_real_distribution<> dis(minLife, maxLife);
+	 std::random_device rd;
+	 std::mt19937 gen(rd());
+	 std::uniform_real_distribution<> disX(-scale.x, scale.x);
+	 std::uniform_real_distribution<> disY(-scale.y, scale.y);
+	 std::uniform_real_distribution<> disZ(-scale.z, scale.z);
+	 std::uniform_real_distribution<> dis(minLife, maxLife);
 
 	std::shared_ptr<VAO> vao = std::make_shared<VAO>();
 	std::shared_ptr<VBO> vbo = std::make_shared<VBO>();
@@ -52,9 +69,6 @@ void ParticleSystem::emit()
 
 	vao->LinkAttrib(*vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, x)); // Position
 	vao->LinkAttrib(*vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, r)); // Color
-	vao->LinkAttrib(*vbo, 2, 2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, u)); // TexCoords
-	vao->LinkAttrib(*vbo, 3, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, normalx)); // TexCoords
-
 	ebo->Bind();
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
@@ -107,12 +121,12 @@ void ParticleSystem::draw(glm::mat4 viewproj, std::shared_ptr<Shader> shader)
 
 void ParticleSystem::reset(glm::vec3& Ppos, glm::vec3& Pvel, float& life)
 {
-	static std::random_device rd;
-	static std::mt19937 gen(rd());
-	static std::uniform_real_distribution<> disX(-scale.x, scale.x);
-	static std::uniform_real_distribution<> disY(-scale.y, scale.y);
-	static std::uniform_real_distribution<> disZ(-scale.z, scale.z);
-	static std::uniform_real_distribution<> dis(minLife, maxLife);
+	 std::random_device rd;
+	 std::mt19937 gen(rd());
+	 std::uniform_real_distribution<> disX(-scale.x, scale.x);
+	 std::uniform_real_distribution<> disY(-scale.y, scale.y);
+	 std::uniform_real_distribution<> disZ(-scale.z, scale.z);
+	 std::uniform_real_distribution<> dis(minLife, maxLife);
 
 	Ppos = pos + glm::vec3(0,scale.y * 10.f,0) + glm::vec3(disX(gen), disY(gen), disZ(gen));
 	Pvel = glm::vec3(0, 0, 0);
